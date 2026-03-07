@@ -82,6 +82,29 @@
       .action-wrap{bottom:84px}
       .chat-ticker{bottom:calc(env(safe-area-inset-bottom, 0px) + 6px);width:min(96vw,760px)}
     }
+    @media (orientation: landscape) and (max-height: 560px){
+      .brand{display:none}
+      .top{left:6px;right:6px;top:6px;display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+      .actions{justify-content:flex-start;gap:4px;max-width:60vw}
+      .btn{padding:4px 7px;font-size:11px}
+      .status{
+        top:44px;
+        left:auto;
+        right:6px;
+        min-width:185px;
+        max-width:235px;
+        padding:5px 7px;
+        background:rgba(8,14,28,.30);
+      }
+      .k{font-size:9px}
+      .v{font-size:15px}
+      .bar{height:6px}
+      .dpad{display:none}
+      .hint{display:none}
+      .action-wrap{right:8px;bottom:58px}
+      .panel{top:38px;bottom:66px;width:min(390px,50vw)}
+      .chat-ticker{bottom:6px;width:min(94vw,760px)}
+    }
   </style>
 </head>
 <body>
