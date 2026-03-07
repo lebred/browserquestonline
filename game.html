@@ -590,6 +590,18 @@
     const t=floorTier(Math.max(1,Number(state.metrics.max_floor||1)));
     return SHOP_BY_TIER[Math.min(t, SHOP_BY_TIER.length-1)];
   };
+  function shopBuyMultiplier(item){
+    const it = item && typeof item === 'object' ? item : {};
+    const slot = String(it.slot || '');
+    // Potions: -90% vs previous inflated price (x100 -> x10)
+    if(slot === 'consumable') return 10;
+    // Equipment: -75% vs previous inflated price (x100 -> x25)
+    return 25;
+  }
+  function shopBuyCost(item){
+    const it = item && typeof item === 'object' ? item : {};
+    return Math.max(1, Math.floor(Number(it.value||0) * shopBuyMultiplier(it)));
+  }
 
   function ensureQuests(){ if(!Array.isArray(state.quests)||!state.quests.length) state.quests=QUESTS.map(q=>({id:q.id,done:false})); }
   function log(msg){ const line=`[${new Date().toLocaleTimeString()}] ${msg}`; state.logs.unshift(line); if(state.logs.length>120) state.logs.length=120; panes.log.innerHTML=state.logs.map(x=>`<div>${x}</div>`).join(''); }
@@ -1561,7 +1573,7 @@
   function buyItem(name){
     const it=ITEMS[name]; if(!it) return;
     if(!isNearRole('merchant',1.7)){ showDialog(tr('needMerchant')); return; }
-    const cost=Math.max(1, Math.floor(Number(it.value||0) * 100));
+    const cost=shopBuyCost(it);
     if(state.player.gold<cost){ showDialog(tr('notEnoughGold')); return; }
     const item = encodeItem(name, 'common');
     state.player.gold-=cost; state.inv.push(item); log(`🛒 ${tr('boughtMsg')}: ${itemDisplayName(item)} (-${cost} ${tr('gold')})`);
@@ -1683,7 +1695,7 @@
     }).join(''):`<div class="k">${tr('bagEmpty')}</div>`);
 
     const stock = shopStockForProgress();
-    const stockHtml = stock.map((n,idx)=>{ const it=ITEMS[n]; const cost=Math.max(1, Math.floor(Number(it.value||0) * 100)); return `<div class="item"><div><div><b>${itemLocalizedName(n)}</b></div><div class="k">${it.slot} · ${cost} ${tr('gold')}</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`; }).join('');
+    const stockHtml = stock.map((n,idx)=>{ const it=ITEMS[n]; const cost=shopBuyCost(it); return `<div class="item"><div><div><b>${itemLocalizedName(n)}</b></div><div class="k">${it.slot} · ${cost} ${tr('gold')}</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`; }).join('');
     panes.shop.innerHTML=`${stockHtml}<div class="k">${tr('merchantHint')}</div>`;
     const chatFocused = (document.activeElement && (document.activeElement.id === 'chatInput'));
     if(!chatFocused){
@@ -1827,7 +1839,8 @@
   }
 
   function tryAutoFullscreen(){
-    if(state.fullscreenTried) return; state.fullscreenTried=true;
+    if(state.fullscreenTried) return;
+    state.fullscreenTried=true;
     const el=document.getElementById('app'); if(el.requestFullscreen) el.requestFullscreen().catch(()=>{});
   }
 
@@ -2374,7 +2387,14 @@
     updateContextAction(); renderPanels();
   }
 
-  window.addEventListener('resize', updateViewMetrics);
+  window.addEventListener('resize', ()=>{
+    updateViewMetrics();
+    state.fullscreenTried = false;
+  });
+  window.addEventListener('orientationchange', ()=>{
+    updateViewMetrics();
+    state.fullscreenTried = false;
+  });
   window.addEventListener('beforeunload', ()=>save());
   document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') save(); });
 
