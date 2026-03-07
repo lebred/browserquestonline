@@ -462,6 +462,7 @@
       bagEmpty:'Bag empty.',
       merchantHint:'Go near the merchant to buy/sell.',
       notEnoughGold:'Not enough gold.',
+      noPotion:'No potion available.',
       portalUsed:'🌀 Town Portal used: back to village',
       portalCasting:'Channeling Town Portal...',
       portalCastInterruptedMove:'Town Portal interrupted by movement.',
@@ -520,6 +521,7 @@
       bagEmpty:'Sac vide.',
       merchantHint:'Approchez-vous du marchand pour acheter/vendre.',
       notEnoughGold:'Pas assez d\'or.',
+      noPotion:'Aucune potion disponible.',
       portalUsed:'🌀 Town Portal utilisé: retour au village',
       portalCasting:'Canalisation du Town Portal...',
       portalCastInterruptedMove:'Town Portal interrompu par le mouvement.',
@@ -1539,10 +1541,28 @@
   function buyItem(name){
     const it=ITEMS[name]; if(!it) return;
     if(!isNearRole('merchant',1.7)){ showDialog(tr('needMerchant')); return; }
-    const cost=Number(it.value||0);
+    const cost=Math.max(1, Math.floor(Number(it.value||0) * 100));
     if(state.player.gold<cost){ showDialog(tr('notEnoughGold')); return; }
     const item = encodeItem(name, 'common');
     state.player.gold-=cost; state.inv.push(item); log(`🛒 ${tr('boughtMsg')}: ${itemDisplayName(item)} (-${cost} ${tr('gold')})`);
+  }
+  function useBestPotion(){
+    let bestIdx = -1, bestHeal = -1;
+    for(let i=0;i<state.inv.length;i++){
+      const it = itemData(state.inv[i]);
+      if(!it || it.slot!=='consumable') continue;
+      const heal = Number(it.heal||0);
+      if(heal > bestHeal){
+        bestHeal = heal;
+        bestIdx = i;
+      }
+    }
+    if(bestIdx < 0){
+      showDialog(tr('noPotion'));
+      return false;
+    }
+    useItemByIndex(bestIdx);
+    return true;
   }
   function sellAllDowngrades(){
     if(!isNearRole('merchant',1.7)){ showDialog(tr('needMerchant')); return; }
@@ -1643,7 +1663,7 @@
     }).join(''):`<div class="k">${tr('bagEmpty')}</div>`);
 
     const stock = shopStockForProgress();
-    const stockHtml = stock.map((n,idx)=>{ const it=ITEMS[n]; return `<div class="item"><div><div><b>${itemLocalizedName(n)}</b></div><div class="k">${it.slot} · ${it.value} or</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`; }).join('');
+    const stockHtml = stock.map((n,idx)=>{ const it=ITEMS[n]; const cost=Math.max(1, Math.floor(Number(it.value||0) * 100)); return `<div class="item"><div><div><b>${itemLocalizedName(n)}</b></div><div class="k">${it.slot} · ${cost} ${tr('gold')}</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`; }).join('');
     panes.shop.innerHTML=`${stockHtml}<div class="k">${tr('merchantHint')}</div>`;
     const chatFocused = (document.activeElement && (document.activeElement.id === 'chatInput'));
     if(!chatFocused){
@@ -1805,6 +1825,10 @@
     }
 
     if(!vx&&!vy&&state.clickTarget){ const dx=state.clickTarget.x-state.player.x, dy=state.clickTarget.y-state.player.y, d=Math.hypot(dx,dy); if(d<0.15) state.clickTarget=null; else {vx=dx/d; vy=dy/d;} }
+    if(state.teleportOpen){
+      const tpNear = nearestTeleporter(2.05);
+      if(!tpNear) closeTeleportModal();
+    }
 
     if(vx||vy){
       if(state.portalCast.active) interruptTownPortal('move');
@@ -2156,7 +2180,7 @@
     const k=e.key.toLowerCase();
     const active = document.activeElement;
     const typing = isTypingTarget(active);
-    const gameplayKey = (state.keys[k]!==undefined) || k==='arrowup' || k==='arrowdown' || k==='arrowleft' || k==='arrowright' || k===' ' || k==='e';
+    const gameplayKey = (state.keys[k]!==undefined) || k==='arrowup' || k==='arrowdown' || k==='arrowleft' || k==='arrowright' || k===' ' || k==='e' || k==='p' || k==='t';
     if(gameplayKey && !typing){
       e.preventDefault();
       // Prevent focused UI buttons (ex: Town Portal) from consuming Space/Enter while playing.
@@ -2171,6 +2195,8 @@
     if(k==='arrowleft') state.keys.a=true;
     if(k==='arrowright') state.keys.d=true;
     if(k===' '||k==='e'){ if(!state.dead) doAction(); }
+    if(k==='p'){ if(!state.dead && !state.sessionConflict) useBestPotion(); }
+    if(k==='t'){ if(!state.dead && !state.sessionConflict) startTownPortalCast(); }
   });
   window.addEventListener('keyup',(e)=>{ const k=e.key.toLowerCase(); if(state.keys[k]!==undefined) state.keys[k]=false; if(k==='arrowup') state.keys.w=false; if(k==='arrowdown') state.keys.s=false; if(k==='arrowleft') state.keys.a=false; if(k==='arrowright') state.keys.d=false; });
 
