@@ -2212,7 +2212,19 @@
     return true;
   }
   function loadLocal(){ const raw=localStorage.getItem(state.saveKey); if(!raw) return false; try{ const ok=loadFromObj(JSON.parse(raw)); if(ok) log(tr('localLoaded')); return ok; }catch{return false;} }
-  async function loadRemote(){ try{ const gid=state.auth.logged?'':guestId; const r=await fetch(`/api/game/save?guest_id=${encodeURIComponent(gid)}`,{credentials:'include'}); const d=await r.json(); if(!d?.ok||!d.save) return false; const ok=loadFromObj(d.save); if(ok) log(tr('serverLoaded')); return ok; }catch{return false;} }
+  async function loadRemote(){
+    try{
+      const gid=state.auth.logged?'':guestId;
+      const r=await fetch(`/api/game/save?guest_id=${encodeURIComponent(gid)}`,{credentials:'include',cache:'no-store'});
+      const d=await r.json();
+      if(!d?.ok||!d.save) return false;
+      const ok=loadFromObj(d.save);
+      if(ok) log(tr('serverLoaded'));
+      return ok;
+    }catch{
+      return false;
+    }
+  }
 
   async function claimGuestToUser(){ try{ await fetch('/api/game/claim-guest',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({guest_id:guestId})}); }catch{} }
   async function createGuestRecoveryLink(){
@@ -2392,10 +2404,12 @@
   document.getElementById('teleportCloseBtn').onclick=()=>closeTeleportModal();
   document.getElementById('sessionReconnectBtn').onclick=async ()=>{
     state.forceSessionClaimOnce = true;
+    await updatePresence();
+    await loadRemote();
     state.sessionConflict = false;
     sessionConflictModal?.classList.remove('show');
-    await updatePresence();
-    await saveServer();
+    updateContextAction();
+    renderPanels();
   };
   teleportModal.addEventListener('click',(e)=>{
     if(e.target === teleportModal) closeTeleportModal();
