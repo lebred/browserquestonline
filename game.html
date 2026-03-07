@@ -990,7 +990,7 @@
         line_en:'I can send you back to your 5/10/15 checkpoints.',
       });
       state.npcs.push({
-        id:'guard',x:41.5,y:37.5,homeX:41.5,homeY:37.5,role:'guard',cd:0,swingUntil:0,swingDir:0,
+        id:'guard',x:49.5,y:42.5,homeX:49.5,homeY:42.5,role:'guard',cd:0,swingUntil:0,swingDir:0,patrolX:49.5,patrolY:42.5,patrolT:0,
         name_fr:'Garde Luc',name_en:'Guard Luc',
         line_fr:'Je protège le village. Reste prudent dans le donjon.',
         line_en:'I protect the village. Be careful in the dungeon.',
@@ -1942,9 +1942,30 @@
             g.swingDir = Math.atan2(dy,dx);
           }
         } else {
-          const hx=Number(g.homeX||g.x), hy=Number(g.homeY||g.y);
-          const dx = hx-g.x, dy = hy-g.y, d=Math.hypot(dx,dy)||1;
-          if(d>0.12){ g.x += (dx/d)*dt*1.7; g.y += (dy/d)*dt*1.7; }
+          g.patrolT = Number(g.patrolT||0) - dt;
+          if(g.patrolT <= 0 || !Number.isFinite(Number(g.patrolX)) || !Number.isFinite(Number(g.patrolY))){
+            const darkTiles = [];
+            for(let yy=1; yy<(state.map?.length||0)-1; yy++){
+              for(let xx=1; xx<(state.map?.[yy]?.length||0)-1; xx++){
+                const t = Number(state.map[yy][xx]||0);
+                if(t!==3 && t!==4) continue; // brown village tiles
+                const wx = xx + 0.5, wy = yy + 0.5;
+                const nearProtected = protectedPts.some(([px,py]) => dist(wx,wy,px,py) < 8.5);
+                if(nearProtected) continue;
+                darkTiles.push([wx,wy]);
+              }
+            }
+            const pick = darkTiles.length ? darkTiles[rng(darkTiles.length)] : [Number(g.homeX||g.x), Number(g.homeY||g.y)];
+            g.patrolX = Number(pick[0]||g.x);
+            g.patrolY = Number(pick[1]||g.y);
+            g.patrolT = 2.2 + Math.random()*2.8;
+          }
+          const px=Number(g.patrolX||g.homeX||g.x), py=Number(g.patrolY||g.homeY||g.y);
+          const dx = px-g.x, dy = py-g.y, d=Math.hypot(dx,dy)||1;
+          if(d>0.18){
+            g.x += (dx/d)*dt*1.45;
+            g.y += (dy/d)*dt*1.45;
+          }
         }
       }
       state.enemies=state.enemies.filter(e=>Number.isFinite(e.hp)&&e.hp>0);
