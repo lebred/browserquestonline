@@ -102,7 +102,7 @@
       .dpad{display:none}
       .hint{display:none}
       .action-wrap{right:8px;bottom:58px}
-      .panel{top:38px;bottom:66px;width:min(390px,50vw)}
+      .panel{top:36px;bottom:66px;width:min(980px,92vw)}
       .chat-ticker{bottom:6px;width:min(94vw,760px)}
     }
   </style>
@@ -292,15 +292,20 @@
         const i = entry.lastIndexOf(ITEM_SEP);
         const name = entry.slice(0, i).trim();
         const rarity = normalizeRarity(entry.slice(i + ITEM_SEP.length));
-        return name ? {name, rarity} : null;
+        const base = ITEMS[name];
+        const fixedRarity = (base && base.slot==='consumable') ? 'common' : rarity;
+        return name ? {name, rarity:fixedRarity, qty:1} : null;
       }
       const name = entry.trim();
-      return name ? {name, rarity:'common'} : null;
+      return name ? {name, rarity:'common', qty:1} : null;
     }
     if(entry && typeof entry === 'object'){
       const name = String(entry.name || entry.n || '').trim();
       if(!name) return null;
-      return {name, rarity:normalizeRarity(entry.rarity || entry.r || 'common')};
+      const base = ITEMS[name];
+      const fixedRarity = (base && base.slot==='consumable') ? 'common' : normalizeRarity(entry.rarity || entry.r || 'common');
+      const qty = Math.max(1, Math.min(9999, Number(entry.qty || entry.q || 1) || 1));
+      return {name, rarity:fixedRarity, qty};
     }
     return null;
   }
@@ -345,7 +350,31 @@
   function itemDisplayName(entry){
     const d = itemData(entry);
     if(!d) return String(entry||'');
+    if(d.slot === 'consumable') return `${itemLocalizedName(d.name)}`;
     return `${itemLocalizedName(d.name)} [${rarityLabel(d.rarity)}]`;
+  }
+  function inventoryQty(entry){
+    const p = parseItemEntry(entry);
+    return Math.max(1, Number(p?.qty || 1));
+  }
+  function addInventoryItem(name, rarity='common', qty=1){
+    const base = ITEMS[String(name||'')];
+    if(!base) return;
+    const q = Math.max(1, Math.floor(Number(qty||1)));
+    if(base.slot === 'consumable'){
+      const idx = state.inv.findIndex((raw)=>{
+        const p = parseItemEntry(raw);
+        return !!(p && p.name === name);
+      });
+      if(idx >= 0){
+        const current = inventoryQty(state.inv[idx]);
+        state.inv[idx] = {name, rarity:'common', qty:current + q};
+      } else {
+        state.inv.push({name, rarity:'common', qty:q});
+      }
+      return;
+    }
+    for(let i=0;i<q;i++) state.inv.push(encodeItem(name, normalizeRarity(rarity)));
   }
   function itemScore(it){
     if(!it) return 0;
@@ -396,9 +425,18 @@
   function normalizeInventory(arr){
     if(!Array.isArray(arr)) return [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
     const out = [];
+    const potionQty = {};
     for(const raw of arr){
       const d = itemData(raw);
-      if(d) out.push(d.key);
+      if(!d) continue;
+      if(d.slot === 'consumable'){
+        potionQty[d.name] = (potionQty[d.name] || 0) + inventoryQty(raw);
+      } else {
+        out.push(d.key);
+      }
+    }
+    for(const [name, qty] of Object.entries(potionQty)){
+      out.push({name, rarity:'common', qty:Math.max(1, Number(qty||1))});
     }
     return out.length ? out : [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
   }
@@ -1447,7 +1485,7 @@
       const itemName=pool[rng(pool.length)];
       const rarity=rarityRollByFloor(state.floor||1);
       const item=encodeItem(itemName, rarity);
-      state.inv.push(item);
+      addInventoryItem(itemName, rarity, 1);
       if(itemName==='Potion HP') state.metrics.potions_found=Number(state.metrics.potions_found||0)+1;
       if(itemName==='Potion HP++') state.metrics.potions_found=Number(state.metrics.potions_found||0)+1;
       const d=itemData(item);
@@ -1537,10 +1575,12 @@
   function useItemByIndex(idx){
     const raw = state.inv[idx];
     const it = itemData(raw);
+    const qty = inventoryQty(raw);
     if(!it) return;
     if(it.slot==='consumable'){
       state.player.hp=Math.min(state.player.hpMax,state.player.hp+Number(it.heal||0));
-      state.inv.splice(idx,1);
+      if(qty > 1) state.inv[idx] = {name:it.name, rarity:'common', qty:qty-1};
+      else state.inv.splice(idx,1);
       log(`🧪 ${itemDisplayName(raw)} ${tr('usedMsg')} (+${it.heal||0} HP)`);
       return;
     }
@@ -1556,18 +1596,23 @@
   function sellItemByIndex(idx){
     const raw = state.inv[idx];
     const it = itemData(raw);
+    const qty = inventoryQty(raw);
     if(!raw || !it) return;
     if(!isNearRole('merchant',1.7)){ showDialog(tr('needMerchant')); return; }
     const value = Math.max(1, Math.floor(Number(it.value||0) * 0.55));
     state.player.gold += value;
-    state.inv.splice(idx, 1);
+    if(it.slot==='consumable' && qty > 1) state.inv[idx] = {name:it.name, rarity:'common', qty:qty-1};
+    else state.inv.splice(idx, 1);
     log(`💰 ${tr('soldMsg')}: ${itemDisplayName(raw)} (+${value} ${tr('gold')})`);
   }
 
   function dropItemByIndex(idx){
     const raw = state.inv[idx];
+    const it = itemData(raw);
+    const qty = inventoryQty(raw);
     if(!raw) return;
-    state.inv.splice(idx, 1);
+    if(it && it.slot==='consumable' && qty > 1) state.inv[idx] = {name:it.name, rarity:'common', qty:qty-1};
+    else state.inv.splice(idx, 1);
     log(`🗑️ ${tr('droppedMsg')}: ${itemDisplayName(raw)}`);
   }
 
@@ -1577,7 +1622,9 @@
     const cost=shopBuyCost(it);
     if(state.player.gold<cost){ showDialog(tr('notEnoughGold')); return; }
     const item = encodeItem(name, 'common');
-    state.player.gold-=cost; state.inv.push(item); log(`🛒 ${tr('boughtMsg')}: ${itemDisplayName(item)} (-${cost} ${tr('gold')})`);
+    state.player.gold-=cost;
+    addInventoryItem(name, 'common', 1);
+    log(`🛒 ${tr('boughtMsg')}: ${itemDisplayName(item)} (-${cost} ${tr('gold')})`);
   }
   function useBestPotion(){
     let bestIdx = -1, bestHeal = -1;
@@ -1690,13 +1737,22 @@
     panes.bags.innerHTML=(`<div style="margin-bottom:8px"><button class="btn" data-sell-downgrades="1">${state.lang==='fr'?'Vendre tous les downgrades':'Sell all downgrades'}</button></div>`)+(state.inv.length?state.inv.map((raw,idx)=>{
       const it=itemData(raw)||{slot:'misc',atk:0,def:0,hp:0,heal:0,rarity:'common',color:'#9fb2d8',name:String(raw)};
       const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.heal?` · Heal ${it.heal}`:'');
-      const rarityChip = `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid ${it.color};color:${it.color};margin-left:6px">${rarityLabel(it.rarity)}</span>`;
+      const rarityChip = (it.slot==='consumable') ? '' : `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid ${it.color};color:${it.color};margin-left:6px">${rarityLabel(it.rarity)}</span>`;
+      const qty = inventoryQty(raw);
+      const qtyChip = qty>1 ? `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid rgba(120,160,220,.45);color:#cfe3ff;margin-left:6px">x${qty}</span>` : '';
       const trend = compareItemTrend(raw);
-      return `<div class="item"><div><div>${trendBadge(trend)}<b>${itemLocalizedName(it.name)}</b>${rarityChip}</div><div class="k">${stat}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap"><button data-use="${idx}">${tr('use')}</button><button data-sell="${idx}">${tr('sell')}</button><button data-drop="${idx}">${tr('drop')}</button></div></div>`;
+      return `<div class="item"><div><div>${trendBadge(trend)}<b>${itemLocalizedName(it.name)}</b>${rarityChip}${qtyChip}</div><div class="k">${stat}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap"><button data-use="${idx}">${tr('use')}</button><button data-sell="${idx}">${tr('sell')}</button><button data-drop="${idx}">${tr('drop')}</button></div></div>`;
     }).join(''):`<div class="k">${tr('bagEmpty')}</div>`);
 
     const stock = shopStockForProgress();
-    const stockHtml = stock.map((n,idx)=>{ const it=ITEMS[n]; const cost=shopBuyCost(it); return `<div class="item"><div><div><b>${itemLocalizedName(n)}</b></div><div class="k">${it.slot} · ${cost} ${tr('gold')}</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`; }).join('');
+    const stockHtml = stock.map((n,idx)=>{
+      const base=ITEMS[n]||{};
+      const it=itemData(encodeItem(n,'common')) || {slot:String(base.slot||'item'),atk:0,def:0,hp:0,heal:0,rarity:'common',color:'#9fb2d8'};
+      const cost=shopBuyCost(base);
+      const rarityChip = `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid ${it.color};color:${it.color};margin-left:6px">${rarityLabel(it.rarity)}</span>`;
+      const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.heal?` · Heal ${it.heal}`:'');
+      return `<div class="item"><div><div><b>${itemLocalizedName(n)}</b>${rarityChip}</div><div class="k">${stat} · ${cost} ${tr('gold')}</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`;
+    }).join('');
     panes.shop.innerHTML=`${stockHtml}<div class="k">${tr('merchantHint')}</div>`;
     const chatFocused = (document.activeElement && (document.activeElement.id === 'chatInput'));
     if(!chatFocused){
