@@ -139,7 +139,7 @@
     </div>
     <div class="tabs">
       <button class="tab active" data-tab="gear" id="tabGear">Équipement</button>
-      <button class="tab" data-tab="quests" id="tabQuests">Quêtes</button>
+      <button class="tab" data-tab="quests" id="tabQuests" style="display:none">Quêtes</button>
       <button class="tab" data-tab="bags" id="tabBags">Inventaire</button>
       <button class="tab" data-tab="shop" id="tabShop">Marchand</button>
       <button class="tab" data-tab="rank" id="tabRank">Classement</button>
@@ -147,7 +147,7 @@
       <button class="tab" data-tab="log" id="tabLog">Journal</button>
     </div>
     <div class="pane active" id="pane-gear"></div>
-    <div class="pane" id="pane-quests"></div>
+    <div class="pane" id="pane-quests" style="display:none"></div>
     <div class="pane" id="pane-bags"></div>
     <div class="pane" id="pane-shop"></div>
     <div class="pane" id="pane-rank"></div>
@@ -444,6 +444,7 @@
     equipped:{weapon:null,shield:null,armor:null,ring:null},
     inv:[encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')],
     peers:[],
+    onlineTotal:1,
     chatMessages:[],
     enemies:[],enemyProjectiles:[],npcs:[],clickTarget:null,keys:{w:false,a:false,s:false,d:false},particles:[],lootTexts:[],logs:[],
     enemyRespawnTick:0,
@@ -477,7 +478,7 @@
       teleporterTitle:'🌀 Arcane Teleporter',
       close:'Close',
       checkpoints:'Teleporter checkpoints:',
-      onlineInZone:'Players online in this zone',
+      onlineInZone:'Players online (server total)',
       noMessages:'No message yet.',
       bagEmpty:'Bag empty.',
       merchantHint:'Go near the merchant to buy/sell.',
@@ -536,7 +537,7 @@
       teleporterTitle:'🌀 Téléporteur Arcane',
       close:'Fermer',
       checkpoints:'Téléporteur (checkpoints):',
-      onlineInZone:'Joueurs en ligne dans cette zone',
+      onlineInZone:'Joueurs en ligne (total serveur)',
       noMessages:'Aucun message.',
       bagEmpty:'Sac vide.',
       merchantHint:'Approchez-vous du marchand pour acheter/vendre.',
@@ -1680,8 +1681,7 @@
     panes.gear.innerHTML=[
       `<div>⚔️ ${tr('weapon')}: ${gearLine('weapon')}</div>`,`<div>🛡️ ${tr('shield')}: ${gearLine('shield')}</div>`,
       `<div>🧥 ${tr('armor')}: ${gearLine('armor')}</div>`,`<div>💍 ${tr('ring')}: ${gearLine('ring')}</div>`,
-      `<hr style="border-color:rgba(140,180,230,.25)">`,`<div>ATK: <b>${p.atk}</b> · DEF: <b>${p.def}</b> · HP Max: <b>${p.hpMax}</b></div>`,
-      `<div class="k">${tr('tierNow')}: ${tr('floor')} ${Math.max(1,Number(state.floor||1))} · ${tr('levelHint')}: ${floorRequiredLevel(state.floor||1)}</div>`
+      `<hr style="border-color:rgba(140,180,230,.25)">`,`<div>ATK: <b>${p.atk}</b> · DEF: <b>${p.def}</b> · HP Max: <b>${p.hpMax}</b></div>`
     ].join('');
 
     ensureQuests();
@@ -1701,7 +1701,7 @@
     const chatFocused = (document.activeElement && (document.activeElement.id === 'chatInput'));
     if(!chatFocused){
       panes.chat.innerHTML = `
-        <div class="k">${tr('onlineInZone')}: ${state.peers.length + 1}</div>
+        <div class="k">${tr('onlineInZone')}: ${Math.max(1, Number(state.onlineTotal||1))}</div>
         <div style="max-height:180px;overflow:auto;border:1px solid rgba(120,160,220,.22);border-radius:8px;padding:6px;margin:6px 0;background:rgba(12,20,35,.45)">
           ${state.chatMessages.length ? state.chatMessages.map(m => `<div><b>${String(m.display_name||'Joueur')}</b>: ${String(m.message||'')}</div>`).join('') : `<div class="k">${tr('noMessages')}</div>`}
         </div>
@@ -1761,6 +1761,9 @@
       const r = await fetch(`/api/game/presence/list?${q.toString()}`, {credentials:'include'});
       const d = await r.json();
       if(!d?.ok || !Array.isArray(d.items)) return;
+      if(Number.isFinite(Number(d.total_online))){
+        state.onlineTotal = Math.max(1, Number(d.total_online||1));
+      }
       const nowMs = Date.now();
       const next = [];
       const oldByKey = {};
@@ -1823,6 +1826,21 @@
   }
 
   function setTab(name){ for(const b of document.querySelectorAll('.tab')) b.classList.toggle('active',b.dataset.tab===name); for(const [k,p] of Object.entries(panes)) p.classList.toggle('active',k===name); }
+  function openChatPanel(){
+    panel.classList.add('open');
+    setTab('chat');
+    setTimeout(()=>{
+      const cp = panes.chat;
+      if(cp){
+        cp.scrollTop = cp.scrollHeight;
+      }
+      const input = panel.querySelector('#chatInput');
+      if(input && typeof input.scrollIntoView === 'function'){
+        input.scrollIntoView({block:'end', inline:'nearest'});
+        try{ input.focus({preventScroll:true}); }catch{ try{ input.focus(); }catch{} }
+      }
+    }, 0);
+  }
 
   function updateViewMetrics(){
     const dpr=Math.max(1,Math.min(window.devicePixelRatio||1,2));
@@ -2273,7 +2291,10 @@
     }catch{}
     window.location.href = `/api/memorise/auth/google/start?next_path=${encodeURIComponent(nextPath)}`;
   };
-  for(const b of document.querySelectorAll('.tab')) b.onclick=()=>setTab(b.dataset.tab);
+  for(const b of document.querySelectorAll('.tab')) b.onclick=()=>{
+    if(String(b.dataset.tab||'') === 'chat'){ openChatPanel(); return; }
+    setTab(b.dataset.tab);
+  };
 
   panel.addEventListener('click',(e)=>{
     const t=e.target;
@@ -2331,8 +2352,7 @@
     }
   });
   chatTicker?.addEventListener('click',()=>{
-    panel.classList.add('open');
-    setTab('chat');
+    openChatPanel();
   });
 
   function updateContextAction(){
