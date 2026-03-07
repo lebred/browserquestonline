@@ -211,6 +211,105 @@
     'Potion HP': {slot:'consumable',atk:0,def:0,hp:0,heal:25,value:16},
     'Potion HP++': {slot:'consumable',atk:0,def:0,hp:0,heal:80,value:85},
   };
+  const RARITY_META = {
+    common:{pow:1.00,val:1.00,color:'#9fb2d8'},
+    magic:{pow:1.14,val:1.75,color:'#59b5ff'},
+    rare:{pow:1.32,val:3.10,color:'#b786ff'},
+    epic:{pow:1.58,val:5.20,color:'#ffb14a'},
+  };
+  const ITEM_SEP = '::';
+  const normalizeRarity = (r) => {
+    const x = String(r||'common').trim().toLowerCase();
+    return RARITY_META[x] ? x : 'common';
+  };
+  function encodeItem(name, rarity='common'){
+    return `${String(name||'')}${ITEM_SEP}${normalizeRarity(rarity)}`;
+  }
+  function parseItemEntry(entry){
+    if(typeof entry === 'string'){
+      if(entry.includes(ITEM_SEP)){
+        const i = entry.lastIndexOf(ITEM_SEP);
+        const name = entry.slice(0, i).trim();
+        const rarity = normalizeRarity(entry.slice(i + ITEM_SEP.length));
+        return name ? {name, rarity} : null;
+      }
+      const name = entry.trim();
+      return name ? {name, rarity:'common'} : null;
+    }
+    if(entry && typeof entry === 'object'){
+      const name = String(entry.name || entry.n || '').trim();
+      if(!name) return null;
+      return {name, rarity:normalizeRarity(entry.rarity || entry.r || 'common')};
+    }
+    return null;
+  }
+  function itemEntryKey(entry){
+    const p = parseItemEntry(entry);
+    return p ? encodeItem(p.name, p.rarity) : '';
+  }
+  function rarityLabel(r){
+    const x = normalizeRarity(r);
+    if(x==='magic') return tr('rarityMagic');
+    if(x==='rare') return tr('rarityRare');
+    if(x==='epic') return tr('rarityEpic');
+    return tr('rarityCommon');
+  }
+  function itemData(entry){
+    const p = parseItemEntry(entry);
+    if(!p) return null;
+    const base = ITEMS[p.name];
+    if(!base) return null;
+    const m = RARITY_META[p.rarity] || RARITY_META.common;
+    const scale = (v, mul) => Math.max(0, Math.round(Number(v||0) * mul));
+    const healMul = 1 + (m.pow - 1) * 0.72;
+    return {
+      key: encodeItem(p.name, p.rarity),
+      name: p.name,
+      rarity: p.rarity,
+      slot: base.slot,
+      atk: scale(base.atk, m.pow),
+      def: scale(base.def, m.pow),
+      hp: scale(base.hp, m.pow),
+      heal: scale(base.heal, healMul),
+      value: scale(base.value, m.val),
+      color: m.color,
+    };
+  }
+  function itemDisplayName(entry){
+    const d = itemData(entry);
+    if(!d) return String(entry||'');
+    return `${d.name} [${rarityLabel(d.rarity)}]`;
+  }
+  function normalizeInventory(arr){
+    if(!Array.isArray(arr)) return [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
+    const out = [];
+    for(const raw of arr){
+      const d = itemData(raw);
+      if(d) out.push(d.key);
+    }
+    return out.length ? out : [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
+  }
+  function normalizeEquipped(eq){
+    const out = {weapon:null,shield:null,armor:null,ring:null};
+    const src = (eq && typeof eq==='object') ? eq : {};
+    for(const slot of Object.keys(out)){
+      const d = itemData(src[slot]);
+      out[slot] = (d && d.slot===slot) ? d.key : null;
+    }
+    return out;
+  }
+  function rarityRollByFloor(floor){
+    const f = Number(floor||1);
+    let pMagic=0.16, pRare=0.02, pEpic=0.0;
+    if(f>=5){ pMagic=0.23; pRare=0.06; pEpic=0.01; }
+    if(f>=10){ pMagic=0.28; pRare=0.11; pEpic=0.03; }
+    if(f>=15){ pMagic=0.30; pRare=0.17; pEpic=0.08; }
+    const r = Math.random();
+    if(r < pEpic) return 'epic';
+    if(r < pEpic + pRare) return 'rare';
+    if(r < pEpic + pRare + pMagic) return 'magic';
+    return 'common';
+  }
   const SHOP_BY_TIER = [
     ['Épée courte','Bouclier en bois','Tunique renforcée','Anneau d\'acier','Potion HP'],
     ['Épée de garde','Bouclier renforcé','Tunique renforcée','Anneau d\'acier','Potion HP','Potion HP++'],
@@ -230,7 +329,7 @@
     view:{w:24,h:14,tile:24,offX:0,offY:0,camX:0,camY:0},
     player:{x:12,y:10,hp:100,hpMax:100,atkBase:8,defBase:2,atk:8,def:2,lvl:1,xp:0,xpNeed:40,gold:0,lastAtk:0,swingUntil:0,swingDir:0,facing:'down',attackAt:0},
     equipped:{weapon:null,shield:null,armor:null,ring:null},
-    inv:['Dague rouillée','Bouclier en bois'],
+    inv:[encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')],
     peers:[],
     chatMessages:[],
     enemies:[],enemyProjectiles:[],npcs:[],clickTarget:null,keys:{w:false,a:false,s:false,d:false},particles:[],lootTexts:[],logs:[],
@@ -280,6 +379,10 @@
       boughtMsg:'Bought',
       soldMsg:'Sold',
       droppedMsg:'Dropped',
+      rarityCommon:'Common',
+      rarityMagic:'Magic',
+      rarityRare:'Rare',
+      rarityEpic:'Epic',
       hitMsg:'hit(s)',
       questMsg:'Quest',
       write:'Write...',
@@ -327,6 +430,10 @@
       boughtMsg:'Achat',
       soldMsg:'Vendu',
       droppedMsg:'Jeté',
+      rarityCommon:'Commun',
+      rarityMagic:'Magique',
+      rarityRare:'Rare',
+      rarityEpic:'Épique',
       hitMsg:'coup(s) touché(s)',
       questMsg:'Quête',
       write:'Écrire...',
@@ -563,7 +670,7 @@
     let def=state.player.defBase + Math.floor((state.player.lvl-1)/2);
     let hpBonus=0;
     for(const slot of ['weapon','shield','armor','ring']){
-      const n=state.equipped[slot]; const it=n?ITEMS[n]:null; if(!it) continue;
+      const it=itemData(state.equipped[slot]); if(!it) continue;
       atk += Number(it.atk||0); def += Number(it.def||0); hpBonus += Number(it.hp||0);
     }
     const maxHpBase=100+(state.player.lvl-1)*12;
@@ -1011,11 +1118,15 @@
         ['Potion HP++','Épée draconique','Égide antique','Armure de dragon','Anneau du phénix'],
       ];
       const pool = pools[Math.min(t, pools.length-1)];
-      const item=pool[rng(pool.length)]; state.inv.push(item);
-      if(item==='Potion HP') state.metrics.potions_found=Number(state.metrics.potions_found||0)+1;
-      if(item==='Potion HP++') state.metrics.potions_found=Number(state.metrics.potions_found||0)+1;
-      state.lootTexts.push({x:state.player.x,y:state.player.y-0.6,t:0,life:1.35,text:`+ ${item}`,color:'#ffe08a'});
-      log(`🎁 ${tr('lootFound')}: ${item}`);
+      const itemName=pool[rng(pool.length)];
+      const rarity=rarityRollByFloor(state.floor||1);
+      const item=encodeItem(itemName, rarity);
+      state.inv.push(item);
+      if(itemName==='Potion HP') state.metrics.potions_found=Number(state.metrics.potions_found||0)+1;
+      if(itemName==='Potion HP++') state.metrics.potions_found=Number(state.metrics.potions_found||0)+1;
+      const d=itemData(item);
+      state.lootTexts.push({x:state.player.x,y:state.player.y-0.6,t:0,life:1.35,text:`+ ${itemDisplayName(item)}`,color:(d?.color||'#ffe08a')});
+      log(`🎁 ${tr('lootFound')}: ${itemDisplayName(item)}`);
     }
   }
 
@@ -1085,29 +1196,41 @@
     attack(state.player.swingDir||0);
   }
 
-  function useItem(name){
-    const it=ITEMS[name]; if(!it) return;
-    if(it.slot==='consumable'){ state.player.hp=Math.min(state.player.hpMax,state.player.hp+Number(it.heal||0)); const idx=state.inv.indexOf(name); if(idx>=0) state.inv.splice(idx,1); log(`🧪 ${name} ${tr('usedMsg')} (+${it.heal||0} HP)`); return; }
-    const slot=it.slot; const prev=state.equipped[slot]; state.equipped[slot]=name; const i=state.inv.indexOf(name); if(i>=0) state.inv.splice(i,1); if(prev) state.inv.push(prev);
-    recalcStats(); log(`🛠️ ${tr('equippedMsg')}: ${name}`);
+  function useItemByIndex(idx){
+    const raw = state.inv[idx];
+    const it = itemData(raw);
+    if(!it) return;
+    if(it.slot==='consumable'){
+      state.player.hp=Math.min(state.player.hpMax,state.player.hp+Number(it.heal||0));
+      state.inv.splice(idx,1);
+      log(`🧪 ${itemDisplayName(raw)} ${tr('usedMsg')} (+${it.heal||0} HP)`);
+      return;
+    }
+    const slot=it.slot;
+    const prev=state.equipped[slot];
+    state.equipped[slot]=itemEntryKey(raw);
+    state.inv.splice(idx,1);
+    if(prev) state.inv.push(itemEntryKey(prev));
+    recalcStats();
+    log(`🛠️ ${tr('equippedMsg')}: ${itemDisplayName(raw)}`);
   }
 
   function sellItemByIndex(idx){
-    const name = state.inv[idx];
-    const it = name ? ITEMS[name] : null;
-    if(!name || !it) return;
+    const raw = state.inv[idx];
+    const it = itemData(raw);
+    if(!raw || !it) return;
     if(!isNearRole('merchant',1.7)){ showDialog(tr('needMerchant')); return; }
     const value = Math.max(1, Math.floor(Number(it.value||0) * 0.55));
     state.player.gold += value;
     state.inv.splice(idx, 1);
-    log(`💰 ${tr('soldMsg')}: ${name} (+${value} ${tr('gold')})`);
+    log(`💰 ${tr('soldMsg')}: ${itemDisplayName(raw)} (+${value} ${tr('gold')})`);
   }
 
   function dropItemByIndex(idx){
-    const name = state.inv[idx];
-    if(!name) return;
+    const raw = state.inv[idx];
+    if(!raw) return;
     state.inv.splice(idx, 1);
-    log(`🗑️ ${tr('droppedMsg')}: ${name}`);
+    log(`🗑️ ${tr('droppedMsg')}: ${itemDisplayName(raw)}`);
   }
 
   function buyItem(name){
@@ -1115,7 +1238,8 @@
     if(!isNearRole('merchant',1.7)){ showDialog(tr('needMerchant')); return; }
     const cost=Number(it.value||0);
     if(state.player.gold<cost){ showDialog(tr('notEnoughGold')); return; }
-    state.player.gold-=cost; state.inv.push(name); log(`🛒 ${tr('boughtMsg')}: ${name} (-${cost} ${tr('gold')})`);
+    const item = encodeItem(name, 'common');
+    state.player.gold-=cost; state.inv.push(item); log(`🛒 ${tr('boughtMsg')}: ${itemDisplayName(item)} (-${cost} ${tr('gold')})`);
   }
 
   function teleportToFloor(floor){
@@ -1150,8 +1274,8 @@
   function renderPanels(){
     const p=state.player;
     panes.gear.innerHTML=[
-      `<div>⚔️ ${tr('weapon')}: <b>${state.equipped.weapon||tr('none')}</b></div>`,`<div>🛡️ ${tr('shield')}: <b>${state.equipped.shield||tr('none')}</b></div>`,
-      `<div>🧥 ${tr('armor')}: <b>${state.equipped.armor||tr('none')}</b></div>`,`<div>💍 ${tr('ring')}: <b>${state.equipped.ring||tr('none')}</b></div>`,
+      `<div>⚔️ ${tr('weapon')}: <b>${state.equipped.weapon?itemDisplayName(state.equipped.weapon):tr('none')}</b></div>`,`<div>🛡️ ${tr('shield')}: <b>${state.equipped.shield?itemDisplayName(state.equipped.shield):tr('none')}</b></div>`,
+      `<div>🧥 ${tr('armor')}: <b>${state.equipped.armor?itemDisplayName(state.equipped.armor):tr('none')}</b></div>`,`<div>💍 ${tr('ring')}: <b>${state.equipped.ring?itemDisplayName(state.equipped.ring):tr('none')}</b></div>`,
       `<hr style="border-color:rgba(140,180,230,.25)">`,`<div>ATK: <b>${p.atk}</b> · DEF: <b>${p.def}</b> · HP Max: <b>${p.hpMax}</b></div>`,
       `<div class="k">${tr('tierNow')}: ${tr('floor')} ${Math.max(1,Number(state.floor||1))} · ${tr('levelHint')}: ${floorRequiredLevel(state.floor||1)}</div>`
     ].join('');
@@ -1159,7 +1283,12 @@
     ensureQuests();
     panes.quests.innerHTML=QUESTS.map(q=>{ const s=state.quests.find(x=>x.id===q.id)||{done:false}; const cur=Number(state.metrics[q.metric]||0); return `<div>${s.done?'✅':'⬜'} ${q.title} <span style="color:var(--muted)">(${Math.min(cur,q.target)}/${q.target})</span></div>`; }).join('');
 
-    panes.bags.innerHTML=state.inv.length?state.inv.map((n,idx)=>{ const it=ITEMS[n]||{slot:'misc',atk:0,def:0,hp:0}; const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.heal?` · Heal ${it.heal}`:''); return `<div class="item"><div><div><b>${n}</b></div><div class="k">${stat}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap"><button data-use="${idx}">${tr('use')}</button><button data-sell="${idx}">${tr('sell')}</button><button data-drop="${idx}">${tr('drop')}</button></div></div>`; }).join(''):`<div class="k">${tr('bagEmpty')}</div>`;
+    panes.bags.innerHTML=state.inv.length?state.inv.map((raw,idx)=>{
+      const it=itemData(raw)||{slot:'misc',atk:0,def:0,hp:0,heal:0,rarity:'common',color:'#9fb2d8',name:String(raw)};
+      const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.heal?` · Heal ${it.heal}`:'');
+      const rarityChip = `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid ${it.color};color:${it.color};margin-left:6px">${rarityLabel(it.rarity)}</span>`;
+      return `<div class="item"><div><div><b>${it.name}</b>${rarityChip}</div><div class="k">${stat}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap"><button data-use="${idx}">${tr('use')}</button><button data-sell="${idx}">${tr('sell')}</button><button data-drop="${idx}">${tr('drop')}</button></div></div>`;
+    }).join(''):`<div class="k">${tr('bagEmpty')}</div>`;
 
     const stock = shopStockForProgress();
     const stockHtml = stock.map((n,idx)=>{ const it=ITEMS[n]; return `<div class="item"><div><div><b>${n}</b></div><div class="k">${it.slot} · ${it.value} or</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`; }).join('');
@@ -1491,8 +1620,8 @@
     state.player.lastAtk = 0;
     state.player.swingUntil = 0;
     if(!Number.isFinite(Number(state.player.swingDir))) state.player.swingDir = 0;
-    state.equipped=(s.equipped&&typeof s.equipped==='object')?s.equipped:{weapon:null,shield:null,armor:null,ring:null};
-    state.inv=Array.isArray(s.inv)?s.inv:['Dague rouillée','Bouclier en bois'];
+    state.equipped=normalizeEquipped(s.equipped);
+    state.inv=normalizeInventory(s.inv);
     state.metrics=(s.metrics&&typeof s.metrics==='object')?s.metrics:{rat_kills:0,max_floor:0,potions_found:0,kills:0};
     state.quests=Array.isArray(s.quests)?s.quests:[]; state.questsDone=Number(s.questsDone||0);
     const sx = Number(state.player.x || 0);
@@ -1624,7 +1753,7 @@
 
   panel.addEventListener('click',(e)=>{
     const t=e.target;
-    if(t instanceof HTMLElement && t.hasAttribute('data-use')){ const idx=Number(t.getAttribute('data-use')||-1); const name=state.inv[idx]; if(name) useItem(name); return; }
+    if(t instanceof HTMLElement && t.hasAttribute('data-use')){ const idx=Number(t.getAttribute('data-use')||-1); if(idx>=0) useItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-sell')){ const idx=Number(t.getAttribute('data-sell')||-1); if(idx>=0) sellItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-drop')){ const idx=Number(t.getAttribute('data-drop')||-1); if(idx>=0) dropItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-buy-index')){ const idx=Number(t.getAttribute('data-buy-index')||-1); const stock=shopStockForProgress(); if(idx>=0&&stock[idx]) buyItem(stock[idx]); return; }

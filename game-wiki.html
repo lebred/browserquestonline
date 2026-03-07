@@ -8,15 +8,21 @@
     :root{--bg:#0b1220;--panel:#101a2d;--text:#e8eefc;--muted:#9fb2d8;--accent:#44d08a}
     *{box-sizing:border-box}
     body{margin:0;background:linear-gradient(180deg,#131f36,#0b1220 45%);color:var(--text);font-family:ui-sans-serif,system-ui}
-    .wrap{max-width:980px;margin:0 auto;padding:16px}
+    .wrap{max-width:1150px;margin:0 auto;padding:16px}
     .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
     .btn{display:inline-block;padding:8px 12px;border-radius:10px;border:1px solid #2e4a78;background:#142846;color:#e6f1ff;text-decoration:none;font-weight:700}
     .panel{background:var(--panel);border:1px solid #203252;border-radius:14px;padding:14px;margin-top:12px}
-    h1,h2{margin:.2em 0 .45em}
-    p,li{color:#dce7ff;line-height:1.5}
+    h1,h2,h3{margin:.2em 0 .45em}
+    p,li,td{color:#dce7ff;line-height:1.5}
     .muted{color:var(--muted)}
-    code{background:#0a1426;border:1px solid #223456;border-radius:6px;padding:2px 6px}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{border-bottom:1px solid rgba(120,160,220,.24);padding:8px 6px;text-align:left;vertical-align:top}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .chip{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid rgba(160,190,235,.45);font-size:12px}
+    .c-common{color:#9fb2d8;border-color:#9fb2d8}
+    .c-magic{color:#59b5ff;border-color:#59b5ff}
+    .c-rare{color:#b786ff;border-color:#b786ff}
+    .c-epic{color:#ffb14a;border-color:#ffb14a}
     @media(max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -25,7 +31,7 @@
   <div class="top">
     <div>
       <h1>📚 ORSON QUEST WIKI</h1>
-      <div class="muted">Wiki vivant du prototype RPG browser</div>
+      <div class="muted">Guide complet: ennemis, loot, rareté, économie et progression</div>
     </div>
     <div>
       <a class="btn" href="/game">Jouer</a>
@@ -34,64 +40,127 @@
   </div>
 
   <section class="panel">
-    <h2>Vision</h2>
-    <p>Créer un action-RPG ultra léger style hack-and-loot, jouable sur mobile et desktop, avec progression persistante et architecture portable vers iOS/Android/Windows/Linux/Steam/Switch.</p>
-  </section>
-
-  <div class="grid">
-    <section class="panel">
-      <h2>Boucle de jeu (MVP actuel)</h2>
-      <ul>
-        <li>Spawn dans le <strong>village</strong>.</li>
-        <li>Entrée du <strong>donjon</strong> avec étages progressifs.</li>
-        <li>Combat temps réel simplifié (attaque, dégâts, mort, respawn).</li>
-        <li><strong>XP + level up + loot + or</strong>.</li>
-        <li>Sauvegarde locale par utilisateur (Google si connecté, sinon visiteur).</li>
-      </ul>
-    </section>
-
-    <section class="panel">
-      <h2>Contrôles</h2>
-      <ul>
-        <li>Desktop: <code>WASD</code> + click-to-move + <code>Space</code> (attaque).</li>
-        <li>Mobile: D-pad tactile + bouton attaque.</li>
-        <li>Bouton <strong>Full screen mobile</strong>.</li>
-      </ul>
-    </section>
-  </div>
-
-  <section class="panel">
-    <h2>Plan de portabilité</h2>
-    <ol>
-      <li>Moteur gameplay isolé (JS pur) sans dépendances lourdes.</li>
-      <li>Rendu Canvas 2D pixel art léger.</li>
-      <li>API backend découplées (auth/progression) pour wrapper natif.</li>
-      <li>Packaging progressif:
-        <ul>
-          <li>PWA mobile</li>
-          <li>Tauri/Electron desktop</li>
-          <li>Godot/Unity bridge si besoin console</li>
-        </ul>
-      </li>
-    </ol>
-  </section>
-
-  <section class="panel">
-    <h2>Roadmap courte</h2>
+    <h2>Résumé du système actuel</h2>
     <ul>
-      <li>Classes de personnages + arbres de talents.</li>
-      <li>Items équipables (slots arme/armure/anneau).</li>
-      <li>Quêtes PNJ et économie village.</li>
-      <li>Instances coop et leaderboard saisonnier.</li>
-      <li>Backend de sauvegarde serveur (cross-device réel).</li>
+      <li>Action-RPG browser temps réel, progression persistante.</li>
+      <li>Items avec <strong>rareté</strong>: Commun, Magique, Rare, Épique.</li>
+      <li>Les stats et la valeur des items montent avec la rareté.</li>
+      <li>Le marchand vend les versions <strong>Communes</strong>; les versions hautes viennent surtout du loot.</li>
+      <li>Revente au marchand: <strong>55%</strong> de la valeur de l'item.</li>
     </ul>
   </section>
 
   <section class="panel">
-    <h2>Repo GitHub (base)</h2>
-    <p>Repo local préparé sur VPS: <code>/root/openclaw-rpg</code>. On pourra le pousser dès que le remote GitHub est créé.</p>
-    <p class="muted">Commande type après création du remote:</p>
-    <p><code>git remote add origin git@github.com:&lt;user&gt;/orson-quest.git && git push -u origin main</code></p>
+    <h2>Rareté et multiplicateurs</h2>
+    <table>
+      <thead><tr><th>Rareté</th><th>Multiplicateur puissance (ATK/DEF/HP)</th><th>Multiplicateur valeur (or)</th><th>Couleur</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip c-common">Commun</span></td><td>x1.00</td><td>x1.00</td><td>Bleu gris</td></tr>
+        <tr><td><span class="chip c-magic">Magique</span></td><td>x1.14</td><td>x1.75</td><td>Bleu</td></tr>
+        <tr><td><span class="chip c-rare">Rare</span></td><td>x1.32</td><td>x3.10</td><td>Violet</td></tr>
+        <tr><td><span class="chip c-epic">Épique</span></td><td>x1.58</td><td>x5.20</td><td>Orange</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Taux de rareté (loot)</h2>
+      <table>
+        <thead><tr><th>Floors</th><th>Commun</th><th>Magique</th><th>Rare</th><th>Épique</th></tr></thead>
+        <tbody>
+          <tr><td>1-4</td><td>82%</td><td>16%</td><td>2%</td><td>0%</td></tr>
+          <tr><td>5-9</td><td>70%</td><td>23%</td><td>6%</td><td>1%</td></tr>
+          <tr><td>10-14</td><td>58%</td><td>28%</td><td>11%</td><td>3%</td></tr>
+          <tr><td>15+</td><td>45%</td><td>30%</td><td>17%</td><td>8%</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">Le loot tombe avec ~50% de chance à la mort d'un ennemi.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Ennemis</h2>
+      <table>
+        <thead><tr><th>Type</th><th>Profil</th><th>Comportement</th></tr></thead>
+        <tbody>
+          <tr><td>Rat</td><td>Faible HP, faible dégâts</td><td>Rapide, bon pour le début et les quêtes.</td></tr>
+          <tr><td>Slime</td><td>Standard</td><td>Présent tôt dans les donjons, rythme stable.</td></tr>
+          <tr><td>Brute</td><td>HP élevé</td><td>Plus lent, coups plus lourds.</td></tr>
+          <tr><td>Ogre</td><td>Très tanky</td><td>Lent, pousse à kite/gérer la distance.</td></tr>
+          <tr><td>Dragon</td><td>Elite</td><td>Attaque mêlée + projectiles élémentaires.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>Catalogue items (base Commun)</h2>
+    <h3>Armes</h3>
+    <table>
+      <thead><tr><th>Item</th><th>ATK</th><th>DEF</th><th>HP</th><th>Prix</th></tr></thead>
+      <tbody>
+        <tr><td>Dague rouillée</td><td>2</td><td>0</td><td>0</td><td>12</td></tr>
+        <tr><td>Épée courte</td><td>4</td><td>0</td><td>0</td><td>45</td></tr>
+        <tr><td>Épée de garde</td><td>6</td><td>1</td><td>0</td><td>85</td></tr>
+        <tr><td>Lame runique</td><td>10</td><td>1</td><td>4</td><td>180</td></tr>
+        <tr><td>Épée draconique</td><td>15</td><td>2</td><td>8</td><td>320</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Boucliers</h3>
+    <table>
+      <thead><tr><th>Item</th><th>ATK</th><th>DEF</th><th>HP</th><th>Prix</th></tr></thead>
+      <tbody>
+        <tr><td>Bouclier en bois</td><td>0</td><td>2</td><td>8</td><td>35</td></tr>
+        <tr><td>Bouclier renforcé</td><td>0</td><td>4</td><td>16</td><td>78</td></tr>
+        <tr><td>Bouclier runique</td><td>0</td><td>7</td><td>26</td><td>190</td></tr>
+        <tr><td>Égide antique</td><td>1</td><td>10</td><td>36</td><td>340</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Armures</h3>
+    <table>
+      <thead><tr><th>Item</th><th>ATK</th><th>DEF</th><th>HP</th><th>Prix</th></tr></thead>
+      <tbody>
+        <tr><td>Bottes légères</td><td>0</td><td>1</td><td>0</td><td>18</td></tr>
+        <tr><td>Tunique renforcée</td><td>0</td><td>3</td><td>12</td><td>60</td></tr>
+        <tr><td>Armure du gardien</td><td>0</td><td>8</td><td>34</td><td>220</td></tr>
+        <tr><td>Armure de dragon</td><td>2</td><td>12</td><td>52</td><td>390</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Anneaux & consommables</h3>
+    <table>
+      <thead><tr><th>Item</th><th>ATK</th><th>DEF</th><th>HP</th><th>Effet</th><th>Prix</th></tr></thead>
+      <tbody>
+        <tr><td>Amulette terne</td><td>0</td><td>0</td><td>10</td><td>Bonus PV</td><td>26</td></tr>
+        <tr><td>Anneau d'acier</td><td>1</td><td>1</td><td>6</td><td>Bonus mixte</td><td>54</td></tr>
+        <tr><td>Anneau runique</td><td>3</td><td>2</td><td>16</td><td>Bonus mixte</td><td>210</td></tr>
+        <tr><td>Anneau du phénix</td><td>5</td><td>4</td><td>26</td><td>Bonus mixte</td><td>360</td></tr>
+        <tr><td>Potion HP</td><td>-</td><td>-</td><td>-</td><td>Soin 25 PV (scalé par rareté)</td><td>16</td></tr>
+        <tr><td>Potion HP++</td><td>-</td><td>-</td><td>-</td><td>Soin 80 PV (scalé par rareté)</td><td>85</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>Économie et progression</h2>
+    <ul>
+      <li>Le marchand vend selon la progression max atteinte par le joueur.</li>
+      <li>Checkpoint téléporteur tous les 5 floors (5/10/15...).</li>
+      <li>Le niveau conseillé monte par palier de donjon.</li>
+      <li>Stratégie recommandée: farmer floors adaptés, vendre le surplus, viser les rolls <span class="chip c-rare">Rare</span> et <span class="chip c-epic">Épique</span>.</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>Prochaine extension prévue</h2>
+    <ul>
+      <li>Affixes magiques (ex: Vampirique, Gardien, Berserker).</li>
+      <li>Sets d'items et bonus 2/3/4 pièces.</li>
+      <li>Drop pools dédiés par biome/floor boss.</li>
+      <li>Objets légendaires (ultra rares) avec effets uniques.</li>
+    </ul>
   </section>
 </div>
 </body>
