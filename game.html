@@ -1674,7 +1674,8 @@
     const gearLine = (slot) => {
       const eq = itemData(state.equipped[slot]);
       if(!eq) return `<b>${tr('none')}</b>`;
-      return `<b>${itemDisplayName(state.equipped[slot])}</b><div class="k">${statLine(eq)}</div>`;
+      const labelColor = String(eq.color || '#eaf2ff');
+      return `<b style="color:${labelColor}">${itemDisplayName(state.equipped[slot])}</b><div class="k">${statLine(eq)}</div>`;
     };
     panes.gear.innerHTML=[
       `<div>⚔️ ${tr('weapon')}: ${gearLine('weapon')}</div>`,`<div>🛡️ ${tr('shield')}: ${gearLine('shield')}</div>`,
