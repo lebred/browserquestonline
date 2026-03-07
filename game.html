@@ -1598,6 +1598,8 @@
     if(state.dead) return;
     let vx=0,vy=0;
     if(state.keys.w) vy-=1; if(state.keys.s) vy+=1; if(state.keys.a) vx-=1; if(state.keys.d) vx+=1;
+    const manualMoveInput = !!(state.keys.w || state.keys.a || state.keys.s || state.keys.d);
+    if(manualMoveInput) state.clickTarget = null;
 
     if(!vx&&!vy&&state.clickTarget){ const dx=state.clickTarget.x-state.player.x, dy=state.clickTarget.y-state.player.y, d=Math.hypot(dx,dy); if(d<0.15) state.clickTarget=null; else {vx=dx/d; vy=dy/d;} }
 
