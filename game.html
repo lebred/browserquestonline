@@ -351,16 +351,36 @@
     if(!it) return 0;
     return Number(it.atk||0)*1.45 + Number(it.def||0)*1.2 + Number(it.hp||0)*0.18 + Number(it.heal||0)*0.22;
   }
+  function rarityRank(r){
+    const x = normalizeRarity(r);
+    if(x==='epic') return 4;
+    if(x==='rare') return 3;
+    if(x==='magic') return 2;
+    return 1;
+  }
   function compareItemTrend(entry){
     const cand = itemData(entry);
     if(!cand || cand.slot==='consumable') return '';
     const eq = itemData(state.equipped[cand.slot]);
     if(!eq) return 'up';
+    const dAtk = Number(cand.atk||0) - Number(eq.atk||0);
+    const dDef = Number(cand.def||0) - Number(eq.def||0);
+    const dHp = Number(cand.hp||0) - Number(eq.hp||0);
+    const dHeal = Number(cand.heal||0) - Number(eq.heal||0);
+    if(dAtk > 0 || dDef > 0 || dHp > 0 || dHeal > 0){
+      if(dAtk >= 0 && dDef >= 0 && dHp >= 0 && dHeal >= 0) return 'up';
+    }
+    if(dAtk < 0 || dDef < 0 || dHp < 0 || dHeal < 0){
+      if(dAtk <= 0 && dDef <= 0 && dHp <= 0 && dHeal <= 0) return 'down';
+    }
     const sC = itemScore(cand);
-    const sE = Math.max(0.001, itemScore(eq));
-    const r = sC / sE;
-    if(r > 1.05) return 'up';
-    if(r < 0.95) return 'down';
+    const sE = itemScore(eq);
+    if(sC > sE + 0.01) return 'up';
+    if(sC + 0.01 < sE) return 'down';
+    const rC = rarityRank(cand.rarity);
+    const rE = rarityRank(eq.rarity);
+    if(rC > rE) return 'up';
+    if(rC < rE) return 'down';
     return 'same';
   }
   function trendBadge(trend){
