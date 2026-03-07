@@ -214,6 +214,7 @@
   let guestId = localStorage.getItem('orson_guest_id_v1') || '';
   if(!guestId){ guestId = Math.random().toString(36).slice(2,12)+Date.now().toString(36).slice(-4); localStorage.setItem('orson_guest_id_v1', guestId); }
   const GUEST_LINK_CODE_KEY = 'orson_guest_link_code_v1';
+  const CHAT_MAX_LEN = 160;
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
@@ -393,6 +394,7 @@
     ctxAction:{type:'attack',target:null,label:'ATK',hint:'Action: Attaquer'},
     fullscreenTried:false,dead:false,levelFxUntil:0,lastVibeAt:0,
     teleportOpen:false,lastPortalOpenAt:0,
+    portalCast:{active:false,startedAt:0,endAt:0},
     audioOn:false,audioCtx:null,audioTimer:null,audioThemeKey:'',
     lang:(localStorage.getItem('orson_lang_v1')||'en')==='fr'?'fr':'en',
   };
@@ -422,6 +424,9 @@
       merchantHint:'Go near the merchant to buy/sell.',
       notEnoughGold:'Not enough gold.',
       portalUsed:'🌀 Town Portal used: back to village',
+      portalCasting:'Channeling Town Portal...',
+      portalCastInterruptedMove:'Town Portal interrupted by movement.',
+      portalCastInterruptedHit:'Town Portal interrupted by enemy hit.',
       merchantPanel:'Open the merchant panel.',
       checkpointLocked:'Checkpoint not unlocked.',
       backVillage:'Back to village.',
@@ -474,6 +479,9 @@
       merchantHint:'Approchez-vous du marchand pour acheter/vendre.',
       notEnoughGold:'Pas assez d\'or.',
       portalUsed:'🌀 Town Portal utilisé: retour au village',
+      portalCasting:'Canalisation du Town Portal...',
+      portalCastInterruptedMove:'Town Portal interrompu par le mouvement.',
+      portalCastInterruptedHit:'Town Portal interrompu par un coup ennemi.',
       merchantPanel:'Ouvre le panel du marchand.',
       checkpointLocked:'Checkpoint non débloqué.',
       backVillage:'Retour au village.',
@@ -1033,6 +1041,7 @@
     let roleLabel = '';
     if(n.role==='elder') roleLabel = state.lang==='fr' ? 'Guérisseur' : 'Healer';
     else if(n.role==='merchant') roleLabel = state.lang==='fr' ? 'Marchand' : 'Shop';
+    else if(n.role==='teleporter') roleLabel = state.lang==='fr' ? 'Téléporteur' : 'Teleporter';
     if(roleLabel){
       ctx.font = 'bold 11px system-ui';
       const w = Math.ceil(ctx.measureText(roleLabel).width) + 8;
@@ -1236,6 +1245,20 @@
       ctx.strokeStyle='rgba(255,225,150,.95)'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(sx,sy,18,start,end); ctx.stroke();
     }
   }
+  function drawPortalCastBar(sx,sy){
+    if(!state.portalCast.active) return;
+    const now = performance.now();
+    const total = Math.max(1, Number(state.portalCast.endAt - state.portalCast.startedAt));
+    const pct = clamp((now - Number(state.portalCast.startedAt||0)) / total, 0, 1);
+    const w = 42, h = 5;
+    const x = Math.floor(sx - w/2), y = Math.floor(sy - 30);
+    ctx.fillStyle='rgba(8,16,30,.82)';
+    ctx.fillRect(x-1, y-1, w+2, h+2);
+    ctx.fillStyle='rgba(60,120,220,.35)';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle='#69b6ff';
+    ctx.fillRect(x, y, Math.floor(w*pct), h);
+  }
 
   function drawParticles(){
     for(const p of state.particles){
@@ -1280,6 +1303,7 @@
   }
 
   function attack(dirAngle=null){
+    if(state.portalCast.active) interruptTownPortal('move');
     const now=performance.now();
     if(now-state.player.lastAtk<340) return;
     state.player.lastAtk=now; state.player.swingUntil=now+220;
@@ -1453,6 +1477,29 @@
     state.player.gold-=cost; state.inv.push(item); log(`🛒 ${tr('boughtMsg')}: ${itemDisplayName(item)} (-${cost} ${tr('gold')})`);
   }
 
+  function completeTownPortal(){
+    state.portalCast.active = false;
+    switchZone('village',0);
+    state.player.hp = Math.max(1, state.player.hp);
+    save();
+    showDialog(tr('portalUsed'));
+  }
+  function startTownPortalCast(){
+    if(state.dead) return;
+    if(state.portalCast.active) return;
+    const now = performance.now();
+    state.portalCast.active = true;
+    state.portalCast.startedAt = now;
+    state.portalCast.endAt = now + 3000;
+    showDialog(tr('portalCasting'));
+  }
+  function interruptTownPortal(reason='move'){
+    if(!state.portalCast.active) return;
+    state.portalCast.active = false;
+    if(reason==='hit') showDialog(tr('portalCastInterruptedHit'));
+    else showDialog(tr('portalCastInterruptedMove'));
+  }
+
   function teleportToFloor(floor){
     const f = Number(floor||0);
     if(!Number.isFinite(f) || f < 5 || f % 5 !== 0) return;
@@ -1512,7 +1559,7 @@
           ${state.chatMessages.length ? state.chatMessages.map(m => `<div><b>${String(m.display_name||'Joueur')}</b>: ${String(m.message||'')}</div>`).join('') : `<div class="k">${tr('noMessages')}</div>`}
         </div>
         <div style="display:flex;gap:6px">
-          <input id="chatInput" maxlength="280" placeholder="${tr('write')}" style="flex:1;min-width:0;border:1px solid rgba(120,160,220,.35);background:rgba(20,34,60,.6);color:#e8f1ff;border-radius:8px;padding:8px">
+          <input id="chatInput" maxlength="${CHAT_MAX_LEN}" placeholder="${tr('write')}" style="flex:1;min-width:0;border:1px solid rgba(120,160,220,.35);background:rgba(20,34,60,.6);color:#e8f1ff;border-radius:8px;padding:8px">
           <button id="chatSendBtn" class="btn primary" type="button">${tr('send')}</button>
         </div>
       `;
@@ -1602,7 +1649,7 @@
   }
 
   async function sendChat(msg){
-    const text = String(msg||'').trim();
+    const text = String(msg||'').trim().slice(0, CHAT_MAX_LEN);
     if(!text) return;
     try{
       await fetch('/api/game/chat/send', {
@@ -1641,14 +1688,19 @@
 
   function update(dt){
     if(state.dead) return;
+    const nowPerf = performance.now();
     let vx=0,vy=0;
     if(state.keys.w) vy-=1; if(state.keys.s) vy+=1; if(state.keys.a) vx-=1; if(state.keys.d) vx+=1;
     const manualMoveInput = !!(state.keys.w || state.keys.a || state.keys.s || state.keys.d);
-    if(manualMoveInput) state.clickTarget = null;
+    if(manualMoveInput){
+      state.clickTarget = null;
+      if(state.portalCast.active) interruptTownPortal('move');
+    }
 
     if(!vx&&!vy&&state.clickTarget){ const dx=state.clickTarget.x-state.player.x, dy=state.clickTarget.y-state.player.y, d=Math.hypot(dx,dy); if(d<0.15) state.clickTarget=null; else {vx=dx/d; vy=dy/d;} }
 
     if(vx||vy){
+      if(state.portalCast.active) interruptTownPortal('move');
       if(Math.abs(vx)>Math.abs(vy)) state.player.facing=vx<0?'left':'right'; else state.player.facing=vy<0?'up':'down';
       state.player.swingDir=Math.atan2(vy,vx);
       const l=Math.hypot(vx,vy)||1; vx/=l; vy/=l;
@@ -1665,6 +1717,7 @@
     state.view.camY += (ty - state.view.camY) * 0.18;
 
     // enemies
+    let enemyDamagedPlayer = false;
     for(const e of state.enemies){
       const dx=state.player.x-e.x, dy=state.player.y-e.y, d=Math.hypot(dx,dy)||1;
       const minAdj = 1.05;
@@ -1692,6 +1745,7 @@
           const floorSpike = floorTier(state.floor||1) * 0.35;
           const dmg=Math.max(1,Math.floor((e.atk-state.player.def+rng(2)) * (1+floorSpike)));
           state.player.hp-=dmg;
+          enemyDamagedPlayer = true;
           e.cd=(e.kind==='dragon') ? .78 : .95;
           e.atkFx=.22;
           e.atkDir=Math.atan2(dy,dx);
@@ -1716,6 +1770,7 @@
       if(!passable(tx,ty)) p.life = 0;
       if(dist(p.x,p.y,state.player.x,state.player.y) < 0.78){
         state.player.hp -= Math.max(1, Number(p.dmg||2));
+        enemyDamagedPlayer = true;
         p.life = 0;
         const nowMs = Date.now();
         if (navigator.vibrate && nowMs - state.lastVibeAt > 180) {
@@ -1725,6 +1780,7 @@
       }
     }
     state.enemyProjectiles = state.enemyProjectiles.filter(p=>Number(p.life||0) > 0);
+    if(enemyDamagedPlayer && state.portalCast.active) interruptTownPortal('hit');
 
     for(const p of state.peers){
       if(!Number.isFinite(Number(p.rx))) p.rx = Number(p.x||0);
@@ -1752,6 +1808,7 @@
     state.lootTexts = state.lootTexts.filter(f=>Number(f.t||0) < Number(f.life||0));
 
     if(state.player.hp<=0 && !state.dead){ state.dead=true; deathModal.classList.add('show'); }
+    if(state.portalCast.active && nowPerf >= Number(state.portalCast.endAt||0)) completeTownPortal();
 
     levelUpCheck();
     updateContextAction();
@@ -1775,7 +1832,7 @@
     for(const peer of state.peers){ const p=worldToScreen(Number(peer.rx ?? peer.x ?? 0),Number(peer.ry ?? peer.y ?? 0)); drawPeer(peer,p.x,p.y); }
     for(const e of state.enemies){ const p=worldToScreen(e.x,e.y); drawEnemy(e,p.x,p.y); }
     drawEnemyProjectiles();
-    const pp=worldToScreen(state.player.x,state.player.y); drawPlayer(pp.x,pp.y);
+    const pp=worldToScreen(state.player.x,state.player.y); drawPlayer(pp.x,pp.y); drawPortalCastBar(pp.x,pp.y);
     drawParticles();
     drawLootTexts();
 
@@ -2012,11 +2069,7 @@
   });
 
   document.getElementById('townPortalBtn').onclick=()=>{
-    if(state.dead) return;
-    switchZone('village',0);
-    state.player.hp = Math.max(1, state.player.hp);
-    save();
-    showDialog(tr('portalUsed'));
+    startTownPortalCast();
   };
 
   document.getElementById('respawnBtn').onclick=()=>{
