@@ -1029,6 +1029,51 @@
       ctx.fillStyle='#10263f'; ctx.fillRect(sx-3,sy-8,2,2); ctx.fillRect(sx+1,sy-8,2,2);
       ctx.fillStyle='#d9bc8a'; ctx.fillRect(sx-1,sy-5,2,2);
     }
+    // Role labels above key NPCs.
+    let roleLabel = '';
+    if(n.role==='elder') roleLabel = state.lang==='fr' ? 'Guérisseur' : 'Healer';
+    else if(n.role==='merchant') roleLabel = state.lang==='fr' ? 'Marchand' : 'Shop';
+    if(roleLabel){
+      ctx.font = 'bold 11px system-ui';
+      const w = Math.ceil(ctx.measureText(roleLabel).width) + 8;
+      const tx = Math.floor(sx - w/2), ty = Math.floor(sy - 24);
+      ctx.fillStyle='rgba(6,12,24,.72)';
+      ctx.fillRect(tx, ty, w, 14);
+      ctx.strokeStyle='rgba(130,170,230,.45)';
+      ctx.strokeRect(tx+0.5, ty+0.5, w-1, 13);
+      ctx.fillStyle='#e8f2ff';
+      ctx.fillText(roleLabel, tx+4, ty+11);
+    }
+  }
+
+  function doorLabelForTile(tile){
+    if(state.zone==='village' && tile===5) return `${tr('floor')} 1`;
+    if(state.zone==='dungeon' && tile===9) return `${tr('floor')} ${Number(state.floor||1)+1}`;
+    if(state.zone==='dungeon' && tile===8){
+      if(Number(state.floor||1)<=1) return tr('zoneVillage');
+      return `${tr('floor')} ${Number(state.floor||1)-1}`;
+    }
+    return '';
+  }
+  function drawDoorLabels(sx0, sy0, sx1, sy1, ts){
+    for(let y=sy0;y<=sy1;y++){
+      for(let x=sx0;x<=sx1;x++){
+        const t = tileAt(x,y);
+        if(t!==5 && t!==8 && t!==9) continue;
+        const label = doorLabelForTile(t);
+        if(!label) continue;
+        const p = worldToScreen(x+0.5, y+0.5);
+        ctx.font='bold 11px system-ui';
+        const w = Math.ceil(ctx.measureText(label).width) + 8;
+        const tx = Math.floor(p.x - w/2), ty = Math.floor(p.y - ts*0.58 - 14);
+        ctx.fillStyle='rgba(8,14,26,.72)';
+        ctx.fillRect(tx, ty, w, 14);
+        ctx.strokeStyle='rgba(140,180,235,.4)';
+        ctx.strokeRect(tx+0.5, ty+0.5, w-1, 13);
+        ctx.fillStyle='#eaf3ff';
+        ctx.fillText(label, tx+4, ty+11);
+      }
+    }
   }
 
   function drawPeer(p,sx,sy){
@@ -1724,6 +1769,7 @@
         drawTile(tileAt(x,y),p.x,p.y,ts);
       }
     }
+    drawDoorLabels(sx0, sy0, sx1, sy1, ts);
 
     for(const n of state.npcs){ const p=worldToScreen(n.x,n.y); drawNPC(n,p.x,p.y); }
     for(const peer of state.peers){ const p=worldToScreen(Number(peer.rx ?? peer.x ?? 0),Number(peer.ry ?? peer.y ?? 0)); drawPeer(peer,p.x,p.y); }
