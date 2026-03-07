@@ -236,6 +236,30 @@
     'Potion HP': {slot:'consumable',atk:0,def:0,hp:0,heal:25,value:16},
     'Potion HP++': {slot:'consumable',atk:0,def:0,hp:0,heal:80,value:85},
   };
+  const ITEM_LABELS = {
+    en:{
+      'Dague rouillée':'Rusty Dagger',
+      'Épée courte':'Short Sword',
+      'Épée de garde':'Guard Sword',
+      'Lame runique':'Runic Blade',
+      'Épée draconique':'Draconic Sword',
+      'Bouclier en bois':'Wooden Shield',
+      'Bouclier renforcé':'Reinforced Shield',
+      'Bouclier runique':'Runic Shield',
+      'Égide antique':'Ancient Aegis',
+      'Bottes légères':'Light Boots',
+      'Tunique renforcée':'Reinforced Tunic',
+      'Armure du gardien':'Guardian Armor',
+      'Armure de dragon':'Dragon Armor',
+      'Amulette terne':'Faded Amulet',
+      'Anneau d\'acier':'Steel Ring',
+      'Anneau runique':'Runic Ring',
+      'Anneau du phénix':'Phoenix Ring',
+      'Potion HP':'HP Potion',
+      'Potion HP++':'HP Potion++',
+    },
+    fr:{},
+  };
   const RARITY_META = {
     common:{pow:1.00,val:1.00,color:'#9fb2d8'},
     magic:{pow:1.14,val:1.75,color:'#59b5ff'},
@@ -279,6 +303,12 @@
     if(x==='epic') return tr('rarityEpic');
     return tr('rarityCommon');
   }
+  function itemLocalizedName(baseName){
+    if(state.lang === 'en'){
+      return ITEM_LABELS.en[String(baseName||'')] || String(baseName||'');
+    }
+    return String(baseName||'');
+  }
   function itemData(entry){
     const p = parseItemEntry(entry);
     if(!p) return null;
@@ -303,7 +333,7 @@
   function itemDisplayName(entry){
     const d = itemData(entry);
     if(!d) return String(entry||'');
-    return `${d.name} [${rarityLabel(d.rarity)}]`;
+    return `${itemLocalizedName(d.name)} [${rarityLabel(d.rarity)}]`;
   }
   function normalizeInventory(arr){
     if(!Array.isArray(arr)) return [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
@@ -863,11 +893,28 @@
   function spawnNPCs(){
     state.npcs=[];
     if(state.zone==='village'){
-      state.npcs.push({id:'elder',x:38.5,y:36.5,name:'Ancien Éloi',role:'elder',line:'Explore le donjon, mais équipe-toi bien.'});
-      state.npcs.push({id:'merchant',x:44.5,y:36.5,name:'Marchand Renaud',role:'merchant',line:'J\'ai du gear solide pour toi.'});
-      state.npcs.push({id:'teleporter',x:46.5,y:42.5,name:'Portail Arcanique',role:'teleporter',line:'Je peux te renvoyer vers tes checkpoints 5/10/15...'});
+      state.npcs.push({
+        id:'elder',x:38.5,y:36.5,role:'elder',
+        name_fr:'Ancien Éloi',name_en:'Elder Eloi',
+        line_fr:'Explore le donjon, mais équipe-toi bien.',
+        line_en:'Explore the dungeon, but gear up before diving too deep.',
+      });
+      state.npcs.push({
+        id:'merchant',x:44.5,y:36.5,role:'merchant',
+        name_fr:'Marchand Renaud',name_en:'Merchant Renaud',
+        line_fr:'J\'ai du gear solide pour toi.',
+        line_en:'I have quality gear if you have the gold.',
+      });
+      state.npcs.push({
+        id:'teleporter',x:46.5,y:42.5,role:'teleporter',
+        name_fr:'Portail Arcanique',name_en:'Arcane Gatekeeper',
+        line_fr:'Je peux te renvoyer vers tes checkpoints 5/10/15...',
+        line_en:'I can send you back to your 5/10/15 checkpoints.',
+      });
     }
   }
+  const npcName = (n) => state.lang==='en' ? (n?.name_en || n?.name_fr || n?.name || 'NPC') : (n?.name_fr || n?.name_en || n?.name || 'PNJ');
+  const npcLine = (n) => state.lang==='en' ? (n?.line_en || n?.line_fr || '') : (n?.line_fr || n?.line_en || '');
 
   function switchZone(zone,floor=0,entry='default'){
     const prevZone = state.zone;
@@ -907,7 +954,15 @@
     else if(t===2){ ctx.fillStyle='#234a34'; ctx.fillRect(sx,sy,ts,ts); ctx.fillStyle='#1c3627'; ctx.fillRect(sx+5,sy+2,ts-10,ts-7); }
     else if(t===3){ ctx.fillStyle='#7c6544'; ctx.fillRect(sx,sy,ts,ts); }
     else if(t===4){ ctx.fillStyle='#bb9f74'; ctx.fillRect(sx,sy,ts,ts); }
-    else if(t===5){ ctx.fillStyle='#3f2a21'; ctx.fillRect(sx,sy,ts,ts); ctx.fillStyle='#e5c171'; ctx.fillRect(sx+Math.floor(ts*.38),sy+3,Math.floor(ts*.24),ts-6); }
+    else if(t===5){
+      // Dungeon gate with frame + arch + glow.
+      ctx.fillStyle='#4b3a2a'; ctx.fillRect(sx,sy,ts,ts);
+      ctx.fillStyle='#6e553c'; ctx.fillRect(sx+1,sy+1,ts-2,ts-2);
+      ctx.fillStyle='#2f2016'; ctx.fillRect(sx+Math.floor(ts*.2),sy+Math.floor(ts*.16),Math.floor(ts*.6),Math.floor(ts*.72));
+      ctx.fillStyle='rgba(255,210,120,.30)'; ctx.fillRect(sx+Math.floor(ts*.28),sy+Math.floor(ts*.22),Math.floor(ts*.44),Math.floor(ts*.1));
+      ctx.fillStyle='#e5c171'; ctx.fillRect(sx+Math.floor(ts*.46),sy+Math.floor(ts*.44),Math.floor(ts*.08),Math.floor(ts*.16));
+      ctx.fillStyle='rgba(255,220,145,.18)'; ctx.fillRect(sx+Math.floor(ts*.18),sy+Math.floor(ts*.1),Math.floor(ts*.64),Math.floor(ts*.06));
+    }
     else if(t===6){
       const f = Number(state.floor || 1);
       const palettes = [
@@ -922,16 +977,58 @@
       if(((sx+sy)/ts)%4===0){ ctx.fillStyle=pal[1]; ctx.fillRect(sx+2,sy+2,3,3);}
     }
     else if(t===7){ ctx.fillStyle='#4b4652'; ctx.fillRect(sx,sy,ts,ts); ctx.fillStyle='#8f1f1f'; ctx.fillRect(sx+Math.floor(ts*.38),sy+Math.floor(ts*.28),Math.floor(ts*.24),Math.floor(ts*.42)); }
-    else if(t===8){ ctx.fillStyle='#3f3b45'; ctx.fillRect(sx,sy,ts,ts); ctx.fillStyle='#8bd3ff'; ctx.fillRect(sx+Math.floor(ts*.26),sy+Math.floor(ts*.26),Math.floor(ts*.5),Math.floor(ts*.5)); }
-    else if(t===9){ ctx.fillStyle='#3f3b45'; ctx.fillRect(sx,sy,ts,ts); ctx.fillStyle='#ffd56e'; ctx.fillRect(sx+Math.floor(ts*.26),sy+Math.floor(ts*.26),Math.floor(ts*.5),Math.floor(ts*.5)); }
-    else if(t===10){ ctx.fillStyle='#273556'; ctx.fillRect(sx,sy,ts,ts); ctx.fillStyle='#7ce8ff'; ctx.fillRect(sx+Math.floor(ts*.22),sy+Math.floor(ts*.22),Math.floor(ts*.56),Math.floor(ts*.56)); ctx.fillStyle='rgba(180,255,255,.65)'; ctx.fillRect(sx+Math.floor(ts*.32),sy+Math.floor(ts*.1),Math.floor(ts*.36),Math.floor(ts*.1)); }
+    else if(t===8){
+      // Stairs up.
+      ctx.fillStyle='#2f3442'; ctx.fillRect(sx,sy,ts,ts);
+      for(let i=0;i<4;i++){
+        const yy = sy + Math.floor(ts*0.2) + i*Math.floor(ts*0.14);
+        ctx.fillStyle = i%2===0 ? '#8bb8da' : '#6e94bd';
+        ctx.fillRect(sx+Math.floor(ts*0.2), yy, Math.floor(ts*0.6), Math.floor(ts*0.1));
+      }
+      ctx.fillStyle='rgba(150,220,255,.35)'; ctx.fillRect(sx+Math.floor(ts*.28),sy+Math.floor(ts*.12),Math.floor(ts*.44),Math.floor(ts*.06));
+    }
+    else if(t===9){
+      // Stairs down.
+      ctx.fillStyle='#2f3442'; ctx.fillRect(sx,sy,ts,ts);
+      for(let i=0;i<4;i++){
+        const yy = sy + Math.floor(ts*0.2) + i*Math.floor(ts*0.14);
+        ctx.fillStyle = i%2===0 ? '#d9b36a' : '#b88f4a';
+        ctx.fillRect(sx+Math.floor(ts*0.2), yy, Math.floor(ts*0.6), Math.floor(ts*0.1));
+      }
+      ctx.fillStyle='rgba(255,220,150,.3)'; ctx.fillRect(sx+Math.floor(ts*.3),sy+Math.floor(ts*.12),Math.floor(ts*.4),Math.floor(ts*.06));
+    }
+    else if(t===10){
+      // Arcane teleporter pad.
+      ctx.fillStyle='#1f2f4b'; ctx.fillRect(sx,sy,ts,ts);
+      ctx.fillStyle='#2a436a'; ctx.fillRect(sx+1,sy+1,ts-2,ts-2);
+      ctx.fillStyle='rgba(124,232,255,.35)'; ctx.beginPath(); ctx.arc(sx+ts/2, sy+ts/2, ts*0.28, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(150,240,255,.8)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(sx+ts/2, sy+ts/2, ts*0.34, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle='rgba(190,255,255,.65)';
+      ctx.fillRect(sx+Math.floor(ts*.48),sy+Math.floor(ts*.08),Math.floor(ts*.04),Math.floor(ts*.84));
+      ctx.fillRect(sx+Math.floor(ts*.08),sy+Math.floor(ts*.48),Math.floor(ts*.84),Math.floor(ts*.04));
+    }
   }
 
   function drawNPC(n,sx,sy){
-    ctx.fillStyle='rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(sx,sy+8,6,3,0,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle=n.role==='merchant'?'#cf9e4b':(n.role==='teleporter'?'#62c7ff':'#8fc3ff'); ctx.fillRect(sx-7,sy-11,14,16);
-    ctx.fillStyle='#f2e7c9'; ctx.fillRect(sx-4,sy-15,8,5);
-    ctx.fillStyle='#13223a'; ctx.fillRect(sx-2,sy-7,2,2);
+    ctx.fillStyle='rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(sx,sy+9,7,3,0,0,Math.PI*2); ctx.fill();
+    if(n.role==='merchant'){
+      ctx.fillStyle='#8a5f2a'; ctx.fillRect(sx-8,sy-11,16,16);
+      ctx.fillStyle='#c48c48'; ctx.fillRect(sx-5,sy-14,10,6);
+      ctx.fillStyle='#264a2f'; ctx.fillRect(sx-10,sy-6,4,10); // bag
+      ctx.fillStyle='#10263f'; ctx.fillRect(sx-3,sy-8,2,2); ctx.fillRect(sx+1,sy-8,2,2);
+    } else if(n.role==='teleporter'){
+      ctx.fillStyle='#304c75'; ctx.fillRect(sx-8,sy-11,16,16);
+      ctx.fillStyle='rgba(120,225,255,.78)'; ctx.fillRect(sx-5,sy-14,10,6);
+      ctx.fillStyle='rgba(190,250,255,.85)'; ctx.fillRect(sx-1,sy-9,2,8);
+      ctx.fillStyle='#10263f'; ctx.fillRect(sx-3,sy-8,2,2); ctx.fillRect(sx+1,sy-8,2,2);
+    } else {
+      ctx.fillStyle='#5b6f92'; ctx.fillRect(sx-8,sy-11,16,16);
+      ctx.fillStyle='#d7d0be'; ctx.fillRect(sx-5,sy-14,10,6);
+      ctx.fillStyle='#e3e9f6'; ctx.fillRect(sx-6,sy-17,12,3); // beard/hair
+      ctx.fillStyle='#10263f'; ctx.fillRect(sx-3,sy-8,2,2); ctx.fillRect(sx+1,sy-8,2,2);
+      ctx.fillStyle='#d9bc8a'; ctx.fillRect(sx-1,sy-5,2,2);
+    }
   }
 
   function drawPeer(p,sx,sy){
@@ -1248,8 +1345,8 @@
   function doAction(){
     const a=state.ctxAction;
     if(a.type==='talk'&&a.target){
-      showDialog(`${a.target.name}: ${a.target.line}`);
-      log(`💬 ${a.target.name}`);
+      showDialog(`${npcName(a.target)}: ${npcLine(a.target)}`);
+      log(`💬 ${npcName(a.target)}`);
       if(a.target.id==='elder'){
         const prev = Number(state.player.hp||0);
         state.player.hp = Number(state.player.hpMax||state.player.hp||100);
@@ -1259,7 +1356,7 @@
       }
       return;
     }
-    if(a.type==='merchant'&&a.target){ showDialog(`${a.target.name}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); setTab('shop'); panel.classList.add('open'); return; }
+    if(a.type==='merchant'&&a.target){ showDialog(`${npcName(a.target)}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); setTab('shop'); panel.classList.add('open'); return; }
     if(a.type==='teleport'&&a.target){ openTeleportModal(); return; }
     if(a.type==='enter'&&a.target){ doEnter(a.target); return; }
     attack(state.player.swingDir||0);
@@ -1330,7 +1427,7 @@
       state.teleportOpen = true;
       return;
     }
-    teleportInfo.textContent = `Checkpoints débloqués jusqu'au floor ${maxF}.`;
+    teleportInfo.textContent = state.lang==='fr' ? `Checkpoints débloqués jusqu'au floor ${maxF}.` : `Unlocked checkpoints up to floor ${maxF}.`;
     teleportChoices.innerHTML = unlocked.map(f=>`<button class="btn primary" type="button" data-teleport-modal="${f}">Floor ${f}</button>`).join('');
     teleportModal.classList.add('show');
     state.teleportOpen = true;
@@ -1356,11 +1453,11 @@
       const it=itemData(raw)||{slot:'misc',atk:0,def:0,hp:0,heal:0,rarity:'common',color:'#9fb2d8',name:String(raw)};
       const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.heal?` · Heal ${it.heal}`:'');
       const rarityChip = `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid ${it.color};color:${it.color};margin-left:6px">${rarityLabel(it.rarity)}</span>`;
-      return `<div class="item"><div><div><b>${it.name}</b>${rarityChip}</div><div class="k">${stat}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap"><button data-use="${idx}">${tr('use')}</button><button data-sell="${idx}">${tr('sell')}</button><button data-drop="${idx}">${tr('drop')}</button></div></div>`;
+      return `<div class="item"><div><div><b>${itemLocalizedName(it.name)}</b>${rarityChip}</div><div class="k">${stat}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap"><button data-use="${idx}">${tr('use')}</button><button data-sell="${idx}">${tr('sell')}</button><button data-drop="${idx}">${tr('drop')}</button></div></div>`;
     }).join(''):`<div class="k">${tr('bagEmpty')}</div>`;
 
     const stock = shopStockForProgress();
-    const stockHtml = stock.map((n,idx)=>{ const it=ITEMS[n]; return `<div class="item"><div><div><b>${n}</b></div><div class="k">${it.slot} · ${it.value} or</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`; }).join('');
+    const stockHtml = stock.map((n,idx)=>{ const it=ITEMS[n]; return `<div class="item"><div><div><b>${itemLocalizedName(n)}</b></div><div class="k">${it.slot} · ${it.value} or</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`; }).join('');
     panes.shop.innerHTML=`${stockHtml}<div class="k">${tr('merchantHint')}</div>`;
     const chatFocused = (document.activeElement && (document.activeElement.id === 'chatInput'));
     if(!chatFocused){
@@ -1909,8 +2006,8 @@
   function doAction(){
     const a=state.ctxAction;
     if(a.type==='talk'&&a.target){
-      showDialog(`${a.target.name}: ${a.target.line}`);
-      log(`💬 ${a.target.name}`);
+      showDialog(`${npcName(a.target)}: ${npcLine(a.target)}`);
+      log(`💬 ${npcName(a.target)}`);
       if(a.target.id==='elder'){
         const prev = Number(state.player.hp||0);
         state.player.hp = Number(state.player.hpMax||state.player.hp||100);
@@ -1920,7 +2017,7 @@
       }
       return;
     }
-    if(a.type==='merchant'&&a.target){ showDialog(`${a.target.name}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); setTab('shop'); panel.classList.add('open'); return; }
+    if(a.type==='merchant'&&a.target){ showDialog(`${npcName(a.target)}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); setTab('shop'); panel.classList.add('open'); return; }
     if(a.type==='teleport'&&a.target){ openTeleportModal(); return; }
     if(a.type==='enter'&&a.target){ doEnter(a.target); return; }
     attack(state.player.swingDir||0);
