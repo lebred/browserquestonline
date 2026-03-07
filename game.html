@@ -936,6 +936,15 @@
     }
     m[upY][upX]=8;
     m[downY][downX]=9;
+    if(Number(floor||0) > 0 && Number(floor||0) % 5 === 0){
+      const pX = clamp(upX + 2, 2, w-3);
+      const pY = upY;
+      for(let yy=-1;yy<=1;yy++) for(let xx=-1;xx<=1;xx++){
+        const tx = clamp(pX+xx,1,w-2), ty = clamp(pY+yy,1,h-2);
+        m[ty][tx] = 6;
+      }
+      m[pY][pX] = 10; // town portal return tile on checkpoint floors
+    }
     return m;
   }
 
@@ -1062,7 +1071,9 @@
     } else {
       const up = findTile(state.map, 8);
       const down = findTile(state.map, 9);
-      if(entry==='from_deeper') spawnNearTile(down || up);
+      const portal = findTile(state.map, 10);
+      if(entry==='from_portal') spawnNearTile(portal || up || down);
+      else if(entry==='from_deeper') spawnNearTile(down || up || portal);
       else spawnNearTile(up || down);
       state.metrics.max_floor=Math.max(Number(state.metrics.max_floor||0),Number(floor||0));
     }
@@ -1196,6 +1207,7 @@
 
   function doorLabelForTile(tile){
     if(state.zone==='village' && tile===5) return `${tr('floor')} 1`;
+    if(state.zone==='dungeon' && tile===10) return tr('zoneVillage');
     if(state.zone==='dungeon' && tile===9) return `${tr('floor')} ${Number(state.floor||1)+1}`;
     if(state.zone==='dungeon' && tile===8){
       if(Number(state.floor||1)<=1) return tr('zoneVillage');
@@ -1207,7 +1219,7 @@
     for(let y=sy0;y<=sy1;y++){
       for(let x=sx0;x<=sx1;x++){
         const t = tileAt(x,y);
-        if(t!==5 && t!==8 && t!==9) continue;
+        if(t!==5 && t!==8 && t!==9 && t!==10) continue;
         const label = doorLabelForTile(t);
         if(!label) continue;
         const p = worldToScreen(x+0.5, y+0.5);
@@ -1547,6 +1559,7 @@
     if(!door) return;
     if(state.zone==='village'&&door.t===5){ switchZone('dungeon',1,'from_shallow'); return; }
     if(state.zone==='village'&&door.t===10){ openTeleportModal(); return; }
+    if(state.zone==='dungeon'&&door.t===10){ switchZone('village',0); return; }
     if(state.zone==='dungeon'&&door.t===9){ switchZone('dungeon',state.floor+1,'from_shallow'); return; }
     if(state.zone==='dungeon'&&door.t===8){ if(state.floor<=1) switchZone('village',0); else switchZone('dungeon',state.floor-1,'from_deeper'); return; }
   }
@@ -1692,7 +1705,7 @@
     const f = Number(floor||0);
     if(!Number.isFinite(f) || f < 5 || f % 5 !== 0) return;
     if(f > Number(state.metrics.max_floor||0)) { showDialog(tr('checkpointLocked')); return; }
-    switchZone('dungeon', f, 'from_shallow');
+    switchZone('dungeon', f, 'from_portal');
     showDialog(`🌀 ${state.lang==='fr'?'Téléporté au':'Teleported to'} ${tr('floor')} ${f}`);
     state.teleportOpen = false;
     teleportModal.classList.remove('show');
@@ -2097,6 +2110,9 @@
         openTeleportModal();
       }
     }
+    else if(state.zone==='dungeon'&&t===10){
+      switchZone('village',0);
+    }
     else if(state.zone==='dungeon'&&t===9) switchZone('dungeon',state.floor+1,'from_shallow');
     else if(state.zone==='dungeon'&&t===8){ if(state.floor<=1) switchZone('village',0); else switchZone('dungeon',state.floor-1,'from_deeper'); }
 
@@ -2461,6 +2477,7 @@
     if(!door) return;
     if(state.zone==='village'&&door.t===5){ switchZone('dungeon',1,'from_shallow'); return; }
     if(state.zone==='village'&&door.t===10){ openTeleportModal(); return; }
+    if(state.zone==='dungeon'&&door.t===10){ switchZone('village',0); return; }
     if(state.zone==='dungeon'&&door.t===9){ switchZone('dungeon',state.floor+1,'from_shallow'); return; }
     if(state.zone==='dungeon'&&door.t===8){ if(state.floor<=1) switchZone('village',0); else switchZone('dungeon',state.floor-1,'from_deeper'); return; }
   }
