@@ -95,7 +95,6 @@
       <a class="btn" id="wikiBtn" href="/wiki">📘 Wiki</a>
       <button class="btn" id="townPortalBtn">🌀 Town Portal</button>
       <button class="btn" id="audioBtn">🔇 Sound</button>
-      <button class="btn" id="langBtn">🌐 EN</button>
       <a class="btn primary" id="googleBtn" href="/api/memorise/auth/google/start?next_path=/game">🔐 Google</a>
     </div>
   </div>
@@ -110,7 +109,10 @@
   <div class="panel" id="panel">
     <div class="panel-head">
       <div class="k" id="menuTitle">Menu</div>
-      <button class="panel-close" id="panelCloseBtn" type="button">✕</button>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="btn" id="langBtn" type="button">🌐 EN</button>
+        <button class="panel-close" id="panelCloseBtn" type="button">✕</button>
+      </div>
     </div>
     <div class="tabs">
       <button class="tab active" data-tab="gear" id="tabGear">Équipement</button>
@@ -387,6 +389,7 @@
       questMsg:'Quest',
       write:'Write...',
       send:'Send',
+      elderHeal:'Ancient Eloi restores your health.',
       levelUp:'Level',
       floor:'Floor',
       tierNow:'Current tier',
@@ -438,6 +441,7 @@
       questMsg:'Quête',
       write:'Écrire...',
       send:'Envoyer',
+      elderHeal:'Ancien Éloi restaure complètement votre santé.',
       levelUp:'Niveau',
       floor:'Floor',
       tierNow:'Palier actuel',
@@ -1189,7 +1193,18 @@
 
   function doAction(){
     const a=state.ctxAction;
-    if(a.type==='talk'&&a.target){ showDialog(`${a.target.name}: ${a.target.line}`); log(`💬 ${a.target.name}`); return; }
+    if(a.type==='talk'&&a.target){
+      showDialog(`${a.target.name}: ${a.target.line}`);
+      log(`💬 ${a.target.name}`);
+      if(a.target.id==='elder'){
+        const prev = Number(state.player.hp||0);
+        state.player.hp = Number(state.player.hpMax||state.player.hp||100);
+        if(state.player.hp > prev){
+          log(`✨ ${tr('elderHeal')}`);
+        }
+      }
+      return;
+    }
     if(a.type==='merchant'&&a.target){ showDialog(`${a.target.name}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); setTab('shop'); panel.classList.add('open'); return; }
     if(a.type==='teleport'&&a.target){ openTeleportModal(); return; }
     if(a.type==='enter'&&a.target){ doEnter(a.target); return; }
@@ -1820,7 +1835,18 @@
 
   function doAction(){
     const a=state.ctxAction;
-    if(a.type==='talk'&&a.target){ showDialog(`${a.target.name}: ${a.target.line}`); log(`💬 ${a.target.name}`); return; }
+    if(a.type==='talk'&&a.target){
+      showDialog(`${a.target.name}: ${a.target.line}`);
+      log(`💬 ${a.target.name}`);
+      if(a.target.id==='elder'){
+        const prev = Number(state.player.hp||0);
+        state.player.hp = Number(state.player.hpMax||state.player.hp||100);
+        if(state.player.hp > prev){
+          log(`✨ ${tr('elderHeal')}`);
+        }
+      }
+      return;
+    }
     if(a.type==='merchant'&&a.target){ showDialog(`${a.target.name}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); setTab('shop'); panel.classList.add('open'); return; }
     if(a.type==='teleport'&&a.target){ openTeleportModal(); return; }
     if(a.type==='enter'&&a.target){ doEnter(a.target); return; }
