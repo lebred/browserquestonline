@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Orson Quest Wiki</title>
+  <style>
+    :root{--bg:#0b1220;--panel:#101a2d;--text:#e8eefc;--muted:#9fb2d8;--accent:#44d08a}
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#131f36,#0b1220 45%);color:var(--text);font-family:ui-sans-serif,system-ui}
+    .wrap{max-width:980px;margin:0 auto;padding:16px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+    .btn{display:inline-block;padding:8px 12px;border-radius:10px;border:1px solid #2e4a78;background:#142846;color:#e6f1ff;text-decoration:none;font-weight:700}
+    .panel{background:var(--panel);border:1px solid #203252;border-radius:14px;padding:14px;margin-top:12px}
+    h1,h2{margin:.2em 0 .45em}
+    p,li{color:#dce7ff;line-height:1.5}
+    .muted{color:var(--muted)}
+    code{background:#0a1426;border:1px solid #223456;border-radius:6px;padding:2px 6px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>📚 ORSON QUEST WIKI</h1>
+      <div class="muted">Wiki vivant du prototype RPG browser</div>
+    </div>
+    <div>
+      <a class="btn" href="/game">Jouer</a>
+      <a class="btn" href="/">Lab</a>
+    </div>
+  </div>
+
+  <section class="panel">
+    <h2>Vision</h2>
+    <p>Créer un action-RPG ultra léger style hack-and-loot, jouable sur mobile et desktop, avec progression persistante et architecture portable vers iOS/Android/Windows/Linux/Steam/Switch.</p>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Boucle de jeu (MVP actuel)</h2>
+      <ul>
+        <li>Spawn dans le <strong>village</strong>.</li>
+        <li>Entrée du <strong>donjon</strong> avec étages progressifs.</li>
+        <li>Combat temps réel simplifié (attaque, dégâts, mort, respawn).</li>
+        <li><strong>XP + level up + loot + or</strong>.</li>
+        <li>Sauvegarde locale par utilisateur (Google si connecté, sinon visiteur).</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>Contrôles</h2>
+      <ul>
+        <li>Desktop: <code>WASD</code> + click-to-move + <code>Space</code> (attaque).</li>
+        <li>Mobile: D-pad tactile + bouton attaque.</li>
+        <li>Bouton <strong>Full screen mobile</strong>.</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2>Plan de portabilité</h2>
+    <ol>
+      <li>Moteur gameplay isolé (JS pur) sans dépendances lourdes.</li>
+      <li>Rendu Canvas 2D pixel art léger.</li>
+      <li>API backend découplées (auth/progression) pour wrapper natif.</li>
+      <li>Packaging progressif:
+        <ul>
+          <li>PWA mobile</li>
+          <li>Tauri/Electron desktop</li>
+          <li>Godot/Unity bridge si besoin console</li>
+        </ul>
+      </li>
+    </ol>
+  </section>
+
+  <section class="panel">
+    <h2>Roadmap courte</h2>
+    <ul>
+      <li>Classes de personnages + arbres de talents.</li>
+      <li>Items équipables (slots arme/armure/anneau).</li>
+      <li>Quêtes PNJ et économie village.</li>
+      <li>Instances coop et leaderboard saisonnier.</li>
+      <li>Backend de sauvegarde serveur (cross-device réel).</li>
+    </ul>
+  </section>
+
+  <section class="panel">
+    <h2>Repo GitHub (base)</h2>
+    <p>Repo local préparé sur VPS: <code>/root/openclaw-rpg</code>. On pourra le pousser dès que le remote GitHub est créé.</p>
+    <p class="muted">Commande type après création du remote:</p>
+    <p><code>git remote add origin git@github.com:&lt;user&gt;/orson-quest.git && git push -u origin main</code></p>
+  </section>
+</div>
+</body>
+</html>
