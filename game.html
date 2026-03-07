@@ -302,10 +302,10 @@
   }
   function rarityRollByFloor(floor){
     const f = Number(floor||1);
-    let pMagic=0.16, pRare=0.02, pEpic=0.0;
-    if(f>=5){ pMagic=0.23; pRare=0.06; pEpic=0.01; }
-    if(f>=10){ pMagic=0.28; pRare=0.11; pEpic=0.03; }
-    if(f>=15){ pMagic=0.30; pRare=0.17; pEpic=0.08; }
+    let pMagic=0.05, pRare=0.007, pEpic=0.0005;
+    if(f>=5){ pMagic=0.08; pRare=0.015; pEpic=0.0015; }
+    if(f>=10){ pMagic=0.10; pRare=0.028; pEpic=0.004; }
+    if(f>=15){ pMagic=0.12; pRare=0.04; pEpic=0.008; }
     const r = Math.random();
     if(r < pEpic) return 'epic';
     if(r < pEpic + pRare) return 'rare';
@@ -335,6 +335,7 @@
     peers:[],
     chatMessages:[],
     enemies:[],enemyProjectiles:[],npcs:[],clickTarget:null,keys:{w:false,a:false,s:false,d:false},particles:[],lootTexts:[],logs:[],
+    enemyRespawnTick:0,
     metrics:{rat_kills:0,max_floor:0,potions_found:0,kills:0},quests:[],questsDone:0,
     ctxAction:{type:'attack',target:null,label:'ATK',hint:'Action: Attaquer'},
     fullscreenTried:false,dead:false,levelFxUntil:0,lastVibeAt:0,
@@ -756,54 +757,84 @@
     return m;
   }
 
-  function spawnEnemies(){
-    state.enemies=[];
+  function desiredEnemyCount(){
     const tier = floorTier(state.floor||1);
-    const count=state.zone==='village'?6:Math.min(14+state.floor*2+(tier*3),44);
+    if(state.zone==='village') return 6;
+    return Math.min(14 + state.floor*2 + (tier*3), 44);
+  }
+  function makeEnemyAt(ex, ey, i=0){
+    const tier = floorTier(state.floor||1);
+    const spike = 1 + tier * 0.55;
+    const base=state.zone==='village'?12:Math.floor((18 + state.floor*5) * spike);
+    let kind = state.zone==='village' ? 'rat' : 'slime';
+    let hp = base;
+    let atk = Math.floor((3 + state.floor) * (1 + tier*0.4));
+    let xp = Math.floor((8 + state.floor*2) * (1 + tier*0.3));
+    let gold = Math.floor((2 + rng(5 + state.floor)) * (1 + tier*0.22));
+    if(state.zone==='dungeon'){
+      const miniBossChance = 0.08 + tier * 0.04 + ((state.floor % 5)===0 ? 0.12 : 0);
+      if(Math.random() < miniBossChance){
+        if(tier >= 2 && Math.random() < 0.5){
+          kind = 'dragon';
+          hp = Math.floor(base * 4.6);
+          atk += 7 + Math.floor(state.floor / 2);
+          xp = Math.floor(xp * 3.1);
+          gold += 24 + rng(30);
+        } else {
+          kind = 'ogre';
+          hp = Math.floor(base * 3.5);
+          atk += 5 + Math.floor(state.floor / 3);
+          xp = Math.floor(xp * 2.5);
+          gold += 14 + rng(18);
+        }
+      } else if(Math.random() < 0.12){
+        kind = 'brute';
+        hp = Math.floor(base * 2.5);
+        atk += 2 + Math.floor(state.floor / 2);
+        xp = Math.floor(xp * 2.0);
+        gold += 8 + rng(12);
+      }
+    }
+    let element = '';
+    if(kind==='dragon'){
+      const variants = ['fire','frost','shadow'];
+      element = variants[Math.max(0, Number(state.floor||1)) % variants.length];
+    }
+    return {id:`e${Date.now()}_${i}_${Math.random().toString(36).slice(2,6)}`,x:ex+.5,y:ey+.5,hp:hp,hpMax:hp,atk:atk,xp:xp,gold:gold,kind:kind,element:element,cd:0,projCd:0,hitFx:0,atkFx:0,atkDir:0,facing:'down'};
+  }
+  function trySpawnOneEnemy(i=0){
     const mapW = state.map?.[0]?.length || 80;
     const mapH = state.map?.length || 80;
-    for(let i=0;i<count;i++){
+    for(let k=0;k<26;k++){
       const ex = 6 + rng(Math.max(8, mapW - 12));
       const ey = 6 + rng(Math.max(8, mapH - 12));
       if(!passable(ex,ey)) continue;
-      const spike = 1 + tier * 0.55;
-      const base=state.zone==='village'?12:Math.floor((18 + state.floor*5) * spike);
-      let kind = state.zone==='village' ? 'rat' : 'slime';
-      let hp = base;
-      let atk = Math.floor((3 + state.floor) * (1 + tier*0.4));
-      let xp = Math.floor((8 + state.floor*2) * (1 + tier*0.3));
-      let gold = Math.floor((2 + rng(5 + state.floor)) * (1 + tier*0.22));
-      if(state.zone==='dungeon'){
-        const miniBossChance = 0.08 + tier * 0.04 + ((state.floor % 5)===0 ? 0.12 : 0);
-        if(Math.random() < miniBossChance){
-          if(tier >= 2 && Math.random() < 0.5){
-            kind = 'dragon';
-            hp = Math.floor(base * 4.6);
-            atk += 7 + Math.floor(state.floor / 2);
-            xp = Math.floor(xp * 3.1);
-            gold += 24 + rng(30);
-          } else {
-            kind = 'ogre';
-            hp = Math.floor(base * 3.5);
-            atk += 5 + Math.floor(state.floor / 3);
-            xp = Math.floor(xp * 2.5);
-            gold += 14 + rng(18);
-          }
-        } else if(Math.random() < 0.12){
-          kind = 'brute';
-          hp = Math.floor(base * 2.5);
-          atk += 2 + Math.floor(state.floor / 2);
-          xp = Math.floor(xp * 2.0);
-          gold += 8 + rng(12);
-        }
-      }
-      let element = '';
-      if(kind==='dragon'){
-        const variants = ['fire','frost','shadow'];
-        element = variants[Math.max(0, Number(state.floor||1)) % variants.length];
-      }
-      state.enemies.push({id:`e${Date.now()}_${i}_${Math.random().toString(36).slice(2,6)}`,x:ex+.5,y:ey+.5,hp:hp,hpMax:hp,atk:atk,xp:xp,gold:gold,kind:kind,element:element,cd:0,projCd:0,hitFx:0,atkFx:0,atkDir:0,facing:'down'});
+      if(dist(ex+.5, ey+.5, state.player.x, state.player.y) < 6) continue;
+      state.enemies.push(makeEnemyAt(ex, ey, i));
+      return true;
     }
+    return false;
+  }
+  function maybeRespawnEnemies(dt){
+    if(state.zone!=='dungeon') return;
+    const target = Math.max(1, desiredEnemyCount());
+    if(state.enemies.length >= target) return;
+    const density = state.enemies.length / target;
+    let interval = 8.5;
+    if(density < 0.55) interval = 3.4;
+    if(density < 0.35) interval = 2.1;
+    if(density < 0.20) interval = 1.2;
+    state.enemyRespawnTick += dt;
+    if(state.enemyRespawnTick >= interval){
+      state.enemyRespawnTick = 0;
+      trySpawnOneEnemy(state.enemies.length);
+    }
+  }
+  function spawnEnemies(){
+    state.enemies=[];
+    state.enemyRespawnTick = 0;
+    const count=desiredEnemyCount();
+    for(let i=0;i<count;i++) trySpawnOneEnemy(i);
   }
 
   function spawnNPCs(){
@@ -1113,7 +1144,7 @@
   }
 
   function maybeLoot(){
-    if(Math.random()<0.5){
+    if(Math.random()<0.125){
       const t = floorTier(state.floor||1);
       const pools = [
         ['Potion HP','Dague rouillée','Amulette terne','Bottes légères','Bouclier en bois'],
@@ -1508,6 +1539,7 @@
       e.hitFx=Math.max(0,e.hitFx-dt);
       e.atkFx=Math.max(0,e.atkFx-dt);
     }
+    maybeRespawnEnemies(dt);
 
     for(const p of state.enemyProjectiles){
       p.x += Number(p.vx||0) * dt;
