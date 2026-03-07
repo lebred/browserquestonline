@@ -190,6 +190,14 @@
       <button class="btn" id="teleportCloseBtn" type="button">Fermer</button>
     </div>
   </div>
+
+  <div class="modal" id="sessionConflictModal">
+    <div class="modal-box">
+      <h2 id="sessionConflictTitle">⚠️ Session active ailleurs</h2>
+      <p id="sessionConflictText">Votre compte joue déjà sur un autre appareil. Cliquez pour reprendre ici.</p>
+      <button class="btn primary" id="sessionReconnectBtn" type="button">Reprendre cette session</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -205,6 +213,7 @@
   const chatTicker = document.getElementById('chatTicker');
   const levelFx = document.getElementById('levelFx');
   const audioBtn = document.getElementById('audioBtn');
+  const sessionConflictModal = document.getElementById('sessionConflictModal');
 
   const panes = {
     gear:document.getElementById('pane-gear'), quests:document.getElementById('pane-quests'), bags:document.getElementById('pane-bags'),
@@ -214,6 +223,8 @@
   let guestId = localStorage.getItem('orson_guest_id_v1') || '';
   if(!guestId){ guestId = Math.random().toString(36).slice(2,12)+Date.now().toString(36).slice(-4); localStorage.setItem('orson_guest_id_v1', guestId); }
   const GUEST_LINK_CODE_KEY = 'orson_guest_link_code_v1';
+  let clientSession = localStorage.getItem('orson_client_session_v1') || '';
+  if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
 
   const ITEMS = {
@@ -263,9 +274,9 @@
   };
   const RARITY_META = {
     common:{pow:1.00,val:1.00,color:'#9fb2d8'},
-    magic:{pow:1.14,val:1.75,color:'#59b5ff'},
-    rare:{pow:1.32,val:3.10,color:'#b786ff'},
-    epic:{pow:1.58,val:5.20,color:'#ffb14a'},
+    magic:{pow:1.12,val:1.85,color:'#59b5ff'},
+    rare:{pow:1.38,val:4.20,color:'#b786ff'},
+    epic:{pow:2.55,val:14.00,color:'#ffb14a'},
   };
   const ITEM_SEP = '::';
   const normalizeRarity = (r) => {
@@ -336,6 +347,32 @@
     if(!d) return String(entry||'');
     return `${itemLocalizedName(d.name)} [${rarityLabel(d.rarity)}]`;
   }
+  function itemScore(it){
+    if(!it) return 0;
+    return Number(it.atk||0)*1.45 + Number(it.def||0)*1.2 + Number(it.hp||0)*0.18 + Number(it.heal||0)*0.22;
+  }
+  function compareItemTrend(entry){
+    const cand = itemData(entry);
+    if(!cand || cand.slot==='consumable') return '';
+    const eq = itemData(state.equipped[cand.slot]);
+    if(!eq) return 'up';
+    const sC = itemScore(cand);
+    const sE = Math.max(0.001, itemScore(eq));
+    const r = sC / sE;
+    if(r > 1.05) return 'up';
+    if(r < 0.95) return 'down';
+    return 'same';
+  }
+  function trendBadge(trend){
+    if(trend==='up') return `<span style="color:#6ee7a9;font-weight:900;margin-right:6px">▲</span>`;
+    if(trend==='down') return `<span style="color:#ff8f8f;font-weight:900;margin-right:6px">▼</span>`;
+    if(trend==='same') return `<span style="color:#b8c7e4;font-weight:900;margin-right:6px">•</span>`;
+    return '';
+  }
+  function statLine(it){
+    if(!it) return '';
+    return `ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}` + (it.heal?` · Heal ${it.heal}`:'');
+  }
   function normalizeInventory(arr){
     if(!Array.isArray(arr)) return [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
     const out = [];
@@ -356,10 +393,10 @@
   }
   function rarityRollByFloor(floor){
     const f = Number(floor||1);
-    let pMagic=0.05, pRare=0.007, pEpic=0.0005;
-    if(f>=5){ pMagic=0.08; pRare=0.015; pEpic=0.0015; }
-    if(f>=10){ pMagic=0.10; pRare=0.028; pEpic=0.004; }
-    if(f>=15){ pMagic=0.12; pRare=0.04; pEpic=0.008; }
+    let pMagic=0.05, pRare=0.006, pEpic=0.00015;
+    if(f>=5){ pMagic=0.07; pRare=0.011; pEpic=0.0006; }
+    if(f>=10){ pMagic=0.09; pRare=0.018; pEpic=0.0012; }
+    if(f>=15){ pMagic=0.11; pRare=0.028; pEpic=0.0024; }
     const r = Math.random();
     if(r < pEpic) return 'epic';
     if(r < pEpic + pRare) return 'rare';
@@ -395,6 +432,8 @@
     fullscreenTried:false,dead:false,levelFxUntil:0,lastVibeAt:0,
     teleportOpen:false,lastPortalOpenAt:0,
     portalCast:{active:false,startedAt:0,endAt:0},
+    sessionConflict:false,
+    forceSessionClaimOnce:false,
     audioOn:false,audioCtx:null,audioTimer:null,audioThemeKey:'',
     lang:(localStorage.getItem('orson_lang_v1')||'en')==='fr'?'fr':'en',
   };
@@ -427,6 +466,9 @@
       portalCasting:'Channeling Town Portal...',
       portalCastInterruptedMove:'Town Portal interrupted by movement.',
       portalCastInterruptedHit:'Town Portal interrupted by enemy hit.',
+      sessionConflictTitle:'⚠️ Session active elsewhere',
+      sessionConflictText:'Your account is active on another device. Click to resume here.',
+      sessionReconnect:'Resume here',
       merchantPanel:'Open the merchant panel.',
       checkpointLocked:'Checkpoint not unlocked.',
       backVillage:'Back to village.',
@@ -482,6 +524,9 @@
       portalCasting:'Canalisation du Town Portal...',
       portalCastInterruptedMove:'Town Portal interrompu par le mouvement.',
       portalCastInterruptedHit:'Town Portal interrompu par un coup ennemi.',
+      sessionConflictTitle:'⚠️ Session active ailleurs',
+      sessionConflictText:'Votre compte est actif sur un autre appareil. Cliquez pour reprendre ici.',
+      sessionReconnect:'Reprendre ici',
       merchantPanel:'Ouvre le panel du marchand.',
       checkpointLocked:'Checkpoint non débloqué.',
       backVillage:'Retour au village.',
@@ -553,6 +598,9 @@
     const ttit=document.getElementById('teleportTitle'); if(ttit) ttit.textContent = tr('teleporterTitle');
     const tt=document.getElementById('teleportInfo'); if(tt && !state.teleportOpen) tt.textContent = tr('checkpoints');
     const tc=document.getElementById('teleportCloseBtn'); if(tc) tc.textContent = tr('close');
+    const sct=document.getElementById('sessionConflictTitle'); if(sct) sct.textContent = tr('sessionConflictTitle');
+    const scx=document.getElementById('sessionConflictText'); if(scx) scx.textContent = tr('sessionConflictText');
+    const scr=document.getElementById('sessionReconnectBtn'); if(scr) scr.textContent = tr('sessionReconnect');
     const t1=chatTicker?.querySelectorAll('.line')[0]; const t2=chatTicker?.querySelectorAll('.line')[1];
     if(t1) t1.textContent = `💬 ${tr('chatWelcome1')}`;
     if(t2) t2.textContent = `💬 ${tr('chatWelcome2')}`;
@@ -919,6 +967,12 @@
         line_fr:'Je peux te renvoyer vers tes checkpoints 5/10/15...',
         line_en:'I can send you back to your 5/10/15 checkpoints.',
       });
+      state.npcs.push({
+        id:'guard',x:41.5,y:37.5,homeX:41.5,homeY:37.5,role:'guard',cd:0,swingUntil:0,swingDir:0,
+        name_fr:'Garde Luc',name_en:'Guard Luc',
+        line_fr:'Je protège le village. Reste prudent dans le donjon.',
+        line_en:'I protect the village. Be careful in the dungeon.',
+      });
     }
   }
   const npcName = (n) => state.lang==='en' ? (n?.name_en || n?.name_fr || n?.name || 'NPC') : (n?.name_fr || n?.name_en || n?.name || 'PNJ');
@@ -1030,6 +1084,17 @@
       ctx.fillStyle='rgba(120,225,255,.78)'; ctx.fillRect(sx-5,sy-14,10,6);
       ctx.fillStyle='rgba(190,250,255,.85)'; ctx.fillRect(sx-1,sy-9,2,8);
       ctx.fillStyle='#10263f'; ctx.fillRect(sx-3,sy-8,2,2); ctx.fillRect(sx+1,sy-8,2,2);
+    } else if(n.role==='guard'){
+      ctx.fillStyle='#48546b'; ctx.fillRect(sx-8,sy-11,16,16);
+      ctx.fillStyle='#d3d9e7'; ctx.fillRect(sx-5,sy-14,10,6);
+      ctx.fillStyle='#93a6c8'; ctx.fillRect(sx+7,sy-5,4,8); // shield
+      ctx.fillStyle='#f0f4ff'; ctx.fillRect(sx-1,sy-17,2,10); // spear
+      ctx.fillStyle='#10263f'; ctx.fillRect(sx-3,sy-8,2,2); ctx.fillRect(sx+1,sy-8,2,2);
+      if(performance.now() < Number(n.swingUntil||0)){
+        const p = 1 - ((Number(n.swingUntil||0)-performance.now())/220);
+        const s = (Number(n.swingDir||0)-0.9)+p*1.2, e=s+0.7;
+        ctx.strokeStyle='rgba(170,210,255,.9)'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(sx,sy,14,s,e); ctx.stroke();
+      }
     } else {
       ctx.fillStyle='#5b6f92'; ctx.fillRect(sx-8,sy-11,16,16);
       ctx.fillStyle='#d7d0be'; ctx.fillRect(sx-5,sy-14,10,6);
@@ -1042,6 +1107,7 @@
     if(n.role==='elder') roleLabel = state.lang==='fr' ? 'Guérisseur' : 'Healer';
     else if(n.role==='merchant') roleLabel = state.lang==='fr' ? 'Marchand' : 'Shop';
     else if(n.role==='teleporter') roleLabel = state.lang==='fr' ? 'Téléporteur' : 'Teleporter';
+    else if(n.role==='guard') roleLabel = state.lang==='fr' ? 'Garde' : 'Guard';
     if(roleLabel){
       ctx.font = 'bold 11px system-ui';
       const w = Math.ceil(ctx.measureText(roleLabel).width) + 8;
@@ -1303,6 +1369,7 @@
   }
 
   function attack(dirAngle=null){
+    if(state.sessionConflict) return;
     if(state.portalCast.active) interruptTownPortal('move');
     const now=performance.now();
     if(now-state.player.lastAtk<340) return;
@@ -1412,6 +1479,7 @@
   }
 
   function doAction(){
+    if(state.sessionConflict) return;
     const a=state.ctxAction;
     if(a.type==='talk'&&a.target){
       showDialog(`${npcName(a.target)}: ${npcLine(a.target)}`);
@@ -1476,6 +1544,26 @@
     const item = encodeItem(name, 'common');
     state.player.gold-=cost; state.inv.push(item); log(`🛒 ${tr('boughtMsg')}: ${itemDisplayName(item)} (-${cost} ${tr('gold')})`);
   }
+  function sellAllDowngrades(){
+    if(!isNearRole('merchant',1.7)){ showDialog(tr('needMerchant')); return; }
+    let sold=0, gain=0;
+    for(let i=state.inv.length-1;i>=0;i--){
+      const raw = state.inv[i];
+      const it = itemData(raw);
+      if(!it || it.slot==='consumable') continue;
+      if(compareItemTrend(raw) !== 'down') continue;
+      const value = Math.max(1, Math.floor(Number(it.value||0) * 0.55));
+      gain += value;
+      sold += 1;
+      state.inv.splice(i,1);
+    }
+    if(sold>0){
+      state.player.gold += gain;
+      log(`💰 ${sold} ${state.lang==='fr'?'downgrades vendus':'downgrades sold'} (+${gain} ${tr('gold')})`);
+    } else {
+      showDialog(state.lang==='fr'?'Aucun downgrade à vendre.':'No downgrade items to sell.');
+    }
+  }
 
   function completeTownPortal(){
     state.portalCast.active = false;
@@ -1485,7 +1573,7 @@
     showDialog(tr('portalUsed'));
   }
   function startTownPortalCast(){
-    if(state.dead) return;
+    if(state.dead || state.sessionConflict) return;
     if(state.portalCast.active) return;
     const now = performance.now();
     state.portalCast.active = true;
@@ -1531,9 +1619,14 @@
 
   function renderPanels(){
     const p=state.player;
+    const gearLine = (slot) => {
+      const eq = itemData(state.equipped[slot]);
+      if(!eq) return `<b>${tr('none')}</b>`;
+      return `<b>${itemDisplayName(state.equipped[slot])}</b><div class="k">${statLine(eq)}</div>`;
+    };
     panes.gear.innerHTML=[
-      `<div>⚔️ ${tr('weapon')}: <b>${state.equipped.weapon?itemDisplayName(state.equipped.weapon):tr('none')}</b></div>`,`<div>🛡️ ${tr('shield')}: <b>${state.equipped.shield?itemDisplayName(state.equipped.shield):tr('none')}</b></div>`,
-      `<div>🧥 ${tr('armor')}: <b>${state.equipped.armor?itemDisplayName(state.equipped.armor):tr('none')}</b></div>`,`<div>💍 ${tr('ring')}: <b>${state.equipped.ring?itemDisplayName(state.equipped.ring):tr('none')}</b></div>`,
+      `<div>⚔️ ${tr('weapon')}: ${gearLine('weapon')}</div>`,`<div>🛡️ ${tr('shield')}: ${gearLine('shield')}</div>`,
+      `<div>🧥 ${tr('armor')}: ${gearLine('armor')}</div>`,`<div>💍 ${tr('ring')}: ${gearLine('ring')}</div>`,
       `<hr style="border-color:rgba(140,180,230,.25)">`,`<div>ATK: <b>${p.atk}</b> · DEF: <b>${p.def}</b> · HP Max: <b>${p.hpMax}</b></div>`,
       `<div class="k">${tr('tierNow')}: ${tr('floor')} ${Math.max(1,Number(state.floor||1))} · ${tr('levelHint')}: ${floorRequiredLevel(state.floor||1)}</div>`
     ].join('');
@@ -1541,12 +1634,13 @@
     ensureQuests();
     panes.quests.innerHTML=QUESTS.map(q=>{ const s=state.quests.find(x=>x.id===q.id)||{done:false}; const cur=Number(state.metrics[q.metric]||0); return `<div>${s.done?'✅':'⬜'} ${q.title} <span style="color:var(--muted)">(${Math.min(cur,q.target)}/${q.target})</span></div>`; }).join('');
 
-    panes.bags.innerHTML=state.inv.length?state.inv.map((raw,idx)=>{
+    panes.bags.innerHTML=(`<div style="margin-bottom:8px"><button class="btn" data-sell-downgrades="1">${state.lang==='fr'?'Vendre tous les downgrades':'Sell all downgrades'}</button></div>`)+(state.inv.length?state.inv.map((raw,idx)=>{
       const it=itemData(raw)||{slot:'misc',atk:0,def:0,hp:0,heal:0,rarity:'common',color:'#9fb2d8',name:String(raw)};
       const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.heal?` · Heal ${it.heal}`:'');
       const rarityChip = `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid ${it.color};color:${it.color};margin-left:6px">${rarityLabel(it.rarity)}</span>`;
-      return `<div class="item"><div><div><b>${itemLocalizedName(it.name)}</b>${rarityChip}</div><div class="k">${stat}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap"><button data-use="${idx}">${tr('use')}</button><button data-sell="${idx}">${tr('sell')}</button><button data-drop="${idx}">${tr('drop')}</button></div></div>`;
-    }).join(''):`<div class="k">${tr('bagEmpty')}</div>`;
+      const trend = compareItemTrend(raw);
+      return `<div class="item"><div><div>${trendBadge(trend)}<b>${itemLocalizedName(it.name)}</b>${rarityChip}</div><div class="k">${stat}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap"><button data-use="${idx}">${tr('use')}</button><button data-sell="${idx}">${tr('sell')}</button><button data-drop="${idx}">${tr('drop')}</button></div></div>`;
+    }).join(''):`<div class="k">${tr('bagEmpty')}</div>`);
 
     const stock = shopStockForProgress();
     const stockHtml = stock.map((n,idx)=>{ const it=ITEMS[n]; return `<div class="item"><div><div><b>${itemLocalizedName(n)}</b></div><div class="k">${it.slot} · ${it.value} or</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`; }).join('');
@@ -1572,12 +1666,14 @@
 
   async function updatePresence(){
     try{
-      await fetch('/api/game/presence/update',{
+      const r = await fetch('/api/game/presence/update',{
         method:'POST',
         credentials:'include',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
           guest_id: state.auth.logged ? '' : guestId,
+          client_session: clientSession,
+          force_claim: !!state.forceSessionClaimOnce,
           zone: state.zone,
           floor: Number(state.floor||0),
           x: Number(state.player.x||0),
@@ -1587,6 +1683,17 @@
           attack_at: Number(state.player.attackAt||0),
         })
       });
+      state.forceSessionClaimOnce = false;
+      const d = await r.json().catch(()=>({}));
+      if(d && d.conflict){
+        state.sessionConflict = true;
+        sessionConflictModal?.classList.add('show');
+        return;
+      }
+      if(state.sessionConflict){
+        state.sessionConflict = false;
+        sessionConflictModal?.classList.remove('show');
+      }
     } catch {}
   }
 
@@ -1687,7 +1794,7 @@
   function screenPointerToWorld(e){ const rect=canvas.getBoundingClientRect(); const sx=e.clientX-rect.left, sy=e.clientY-rect.top; return screenToWorld(sx,sy); }
 
   function update(dt){
-    if(state.dead) return;
+    if(state.dead || state.sessionConflict) return;
     const nowPerf = performance.now();
     let vx=0,vy=0;
     if(state.keys.w) vy-=1; if(state.keys.s) vy+=1; if(state.keys.a) vx-=1; if(state.keys.d) vx+=1;
@@ -1759,6 +1866,44 @@
       }
       e.hitFx=Math.max(0,e.hitFx-dt);
       e.atkFx=Math.max(0,e.atkFx-dt);
+    }
+    if(state.zone==='village'){
+      const guards = state.npcs.filter(n=>n.role==='guard');
+      const protectedPts = [
+        [38.5,36.5], // healer
+        [44.5,36.5], // merchant
+        [41.0,39.0], // dungeon gate
+      ];
+      for(const g of guards){
+        g.cd = Number(g.cd||0) - dt;
+        let target=null, best=999;
+        for(const e of state.enemies){
+          const nearProtected = protectedPts.some(([px,py])=>dist(e.x,e.y,px,py)<7.2);
+          if(!nearProtected) continue;
+          const d = dist(e.x,e.y,g.x,g.y);
+          if(d<best){ best=d; target=e; }
+        }
+        if(target){
+          const dx = target.x - g.x, dy = target.y - g.y;
+          const d = Math.hypot(dx,dy) || 1;
+          if(d>1.55){
+            g.x += (dx/d) * dt * 2.2;
+            g.y += (dy/d) * dt * 2.2;
+          } else if(g.cd<=0){
+            const dmg = 28 + Math.floor(Number(state.player.lvl||1) * 1.3);
+            target.hp -= dmg;
+            target.hitFx = .2;
+            g.cd = 0.55;
+            g.swingUntil = performance.now() + 220;
+            g.swingDir = Math.atan2(dy,dx);
+          }
+        } else {
+          const hx=Number(g.homeX||g.x), hy=Number(g.homeY||g.y);
+          const dx = hx-g.x, dy = hy-g.y, d=Math.hypot(dx,dy)||1;
+          if(d>0.12){ g.x += (dx/d)*dt*1.7; g.y += (dy/d)*dt*1.7; }
+        }
+      }
+      state.enemies=state.enemies.filter(e=>Number.isFinite(e.hp)&&e.hp>0);
     }
     maybeRespawnEnemies(dt);
 
@@ -1874,11 +2019,19 @@
         lvl: state.player.lvl, xp: state.player.xp, xpNeed: state.player.xpNeed, gold: state.player.gold,
         swingDir: state.player.swingDir, facing: state.player.facing,
       };
-      await fetch('/api/game/save',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      const r = await fetch('/api/game/save',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({
         guest_id:state.auth.logged?'':guestId,
+        client_session:clientSession,
+        force_claim: !!state.forceSessionClaimOnce,
         save:{zone:state.zone,floor:state.floor,player:playerPersist,equipped:state.equipped,inv:state.inv,metrics:state.metrics,quests:state.quests,questsDone:state.questsDone,t:Date.now()},
         profile:{level:Number(state.player.lvl||1),gold:Number(state.player.gold||0),max_floor:Number(state.metrics.max_floor||0),kills:Number(state.metrics.kills||0),quests_done:Number(state.questsDone||0)}
       })});
+      state.forceSessionClaimOnce = false;
+      const d = await r.json().catch(()=>({}));
+      if(d && d.conflict){
+        state.sessionConflict = true;
+        sessionConflictModal?.classList.add('show');
+      }
     }catch{}
   }
   async function save(){ saveLocal(); await saveServer(); }
@@ -1978,7 +2131,7 @@
 
   canvas.addEventListener('pointerdown',(e)=>{
     e.preventDefault(); tryAutoFullscreen();
-    if(state.dead) return;
+    if(state.dead || state.sessionConflict) return;
     const w=screenPointerToWorld(e);
     const tx=Math.floor(w.x), ty=Math.floor(w.y), t=tileAt(tx,ty);
     if((t===5||t===8||t===9||t===10) && dist(w.x,w.y,state.player.x,state.player.y)<2.2){ doEnter({x:tx,y:ty,t}); return; }
@@ -2043,6 +2196,7 @@
 
   panel.addEventListener('click',(e)=>{
     const t=e.target;
+    if(t instanceof HTMLElement && t.hasAttribute('data-sell-downgrades')){ sellAllDowngrades(); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-use')){ const idx=Number(t.getAttribute('data-use')||-1); if(idx>=0) useItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-sell')){ const idx=Number(t.getAttribute('data-sell')||-1); if(idx>=0) sellItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-drop')){ const idx=Number(t.getAttribute('data-drop')||-1); if(idx>=0) dropItemByIndex(idx); return; }
@@ -2078,6 +2232,13 @@
     switchZone('village',0); save();
   };
   document.getElementById('teleportCloseBtn').onclick=()=>closeTeleportModal();
+  document.getElementById('sessionReconnectBtn').onclick=async ()=>{
+    state.forceSessionClaimOnce = true;
+    state.sessionConflict = false;
+    sessionConflictModal?.classList.remove('show');
+    await updatePresence();
+    await saveServer();
+  };
   teleportModal.addEventListener('click',(e)=>{
     if(e.target === teleportModal) closeTeleportModal();
   });
@@ -2105,6 +2266,7 @@
   }
 
   function doAction(){
+    if(state.sessionConflict) return;
     const a=state.ctxAction;
     if(a.type==='talk'&&a.target){
       showDialog(`${npcName(a.target)}: ${npcLine(a.target)}`);
