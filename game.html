@@ -226,8 +226,11 @@
     shop:document.getElementById('pane-shop'), rank:document.getElementById('pane-rank'), chat:document.getElementById('pane-chat'), log:document.getElementById('pane-log'),
   };
 
+  function createGuestId(){
+    return Math.random().toString(36).slice(2,12)+Date.now().toString(36).slice(-4);
+  }
   let guestId = localStorage.getItem('orson_guest_id_v1') || '';
-  if(!guestId){ guestId = Math.random().toString(36).slice(2,12)+Date.now().toString(36).slice(-4); localStorage.setItem('orson_guest_id_v1', guestId); }
+  if(!guestId){ guestId = createGuestId(); localStorage.setItem('orson_guest_id_v1', guestId); }
   const GUEST_LINK_CODE_KEY = 'orson_guest_link_code_v1';
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
@@ -567,6 +570,8 @@
       killsToday:'kills today',
       deathPenalty:'Death penalty',
       deathAvoided:'Near death avoided',
+      logoutConfirm:'Log out now? You will switch to a fresh visitor profile.',
+      switchedGuest:'Switched to a fresh guest profile.',
     },
     fr:{
       menu:'Menu', gear:'Équipement', quests:'Quêtes', bags:'Inventaire', shop:'Marchand', rank:'Classement', log:'Journal',
@@ -632,6 +637,8 @@
       killsToday:'kills aujourd\'hui',
       deathPenalty:'Pénalité de mort',
       deathAvoided:'Mort évitée',
+      logoutConfirm:'Se déconnecter maintenant? Vous passerez sur un nouveau profil visiteur.',
+      switchedGuest:'Bascule vers un nouveau profil visiteur.',
     },
   };
   const tr=(k)=> (I18N[state.lang]&&I18N[state.lang][k]) || (I18N.en[k]||k);
@@ -884,6 +891,40 @@
     const ratio=clamp(state.player.hp/Math.max(1,state.player.hpMax),0,1);
     state.player.hpMax=newMax; state.player.hp=clamp(Math.round(newMax*ratio),1,newMax);
     state.player.atk=atk; state.player.def=def;
+  }
+
+  async function resetToFreshGuestProfile(regenerateGuest=true){
+    if(regenerateGuest){
+      guestId = createGuestId();
+      localStorage.setItem('orson_guest_id_v1', guestId);
+    }
+    state.auth = { id:'guest', name:`Guest-${guestId.slice(0,6)}`, logged:false };
+    state.saveKey = `orson_rpg_save_guest_${guestId}`;
+    state.dead = false;
+    state.sessionConflict = false;
+    state.forceSessionClaimOnce = false;
+    state.teleportOpen = false;
+    state.portalCast = {active:false,startedAt:0,endAt:0};
+    state.clickTarget = null;
+    state.player = {x:12,y:10,hp:100,hpMax:100,atkBase:8,defBase:2,atk:8,def:2,lvl:1,xp:0,xpNeed:40,gold:0,lastAtk:0,swingUntil:0,swingDir:0,facing:'down',attackAt:0};
+    state.equipped = {weapon:null,shield:null,armor:null,ring:null};
+    state.inv = [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
+    state.metrics = {rat_kills:0,max_floor:0,potions_found:0,kills:0};
+    state.quests = [];
+    state.questsDone = 0;
+    state.peers = [];
+    state.enemies = [];
+    state.enemyProjectiles = [];
+    state.particles = [];
+    state.lootTexts = [];
+    ensureQuests();
+    recalcStats();
+    switchZone('village',0);
+    refreshAuthUi();
+    updateContextAction();
+    renderPanels();
+    await updatePresence();
+    await save();
   }
 
   function tileAt(x,y){ if(!state.map||x<0||y<0||y>=state.map.length||x>=state.map[0].length) return 1; return state.map[y][x]; }
@@ -1853,6 +1894,20 @@
     }catch{}
   }
 
+  async function clearPresenceForCurrentIdentity(){
+    try{
+      await fetch('/api/game/presence/clear', {
+        method:'POST',
+        credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          guest_id: state.auth.logged ? '' : guestId,
+          client_session: clientSession,
+        }),
+      });
+    }catch{}
+  }
+
   async function updatePresence(){
     try{
       const r = await fetch('/api/game/presence/update',{
@@ -2456,14 +2511,13 @@
   document.getElementById('langBtn').onclick=()=>toggleLanguage();
   document.getElementById('logoutBtn').onclick=async ()=>{
     if(!state.auth.logged) return;
+    if(!window.confirm(tr('logoutConfirm'))) return;
+    await clearPresenceForCurrentIdentity();
     try{
       await fetch('/api/memorise/logout', { method:'POST', credentials:'include' });
     }catch{}
-    state.auth = { id:'guest', name:`Guest-${guestId.slice(0,6)}`, logged:false };
-    state.saveKey = `orson_rpg_save_guest_${guestId}`;
-    refreshAuthUi();
-    log(state.lang==='fr' ? '🔒 Déconnecté. Mode visiteur actif.' : '🔒 Logged out. Guest mode active.');
-    await save();
+    await resetToFreshGuestProfile(true);
+    log(`🔒 ${tr('switchedGuest')}`);
   };
   document.getElementById('googleBtn').onclick=async (e)=>{
     if(state.auth.logged){
