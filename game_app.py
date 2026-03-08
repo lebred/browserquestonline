@@ -12,6 +12,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from hashlib import sha256
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 APP_ROOT = Path(os.getenv('BQ_APP_ROOT', '/srv/browserquest'))
 STATIC_DIR = APP_ROOT / 'static'
@@ -20,6 +21,7 @@ AUTH_USERS_TABLE = os.getenv('BQ_AUTH_USERS_TABLE', 'auth_users').strip() or 'au
 AUTH_SESSIONS_TABLE = os.getenv('BQ_AUTH_SESSIONS_TABLE', 'auth_sessions').strip() or 'auth_sessions'
 AUTH_COOKIE_NAME = os.getenv('BQ_AUTH_COOKIE', 'bq_session').strip() or 'bq_session'
 AUTH_START_PATH = os.getenv('BQ_AUTH_START_PATH', '/api/auth/google/start').strip() or '/api/auth/google/start'
+GAME_TZ = os.getenv('BQ_GAME_TIMEZONE', 'America/Montreal').strip() or 'America/Montreal'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -51,6 +53,32 @@ def _auth_cookie_name() -> str:
 
 def _auth_session_max_age_sec() -> int:
     return 60 * 60 * 24 * 14
+
+
+def _game_today_key() -> str:
+    try:
+        return datetime.now(ZoneInfo(GAME_TZ)).strftime('%Y-%m-%d')
+    except Exception:
+        return datetime.now(timezone.utc).strftime('%Y-%m-%d')
+
+
+def _game_track_daily_kills(cur: sqlite3.Cursor, user_key: str, display_name: str, previous_kills: int, new_kills: int) -> None:
+    delta = max(0, int(new_kills) - int(previous_kills))
+    if delta <= 0:
+        return
+    day_key = _game_today_key()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    cur.execute(
+        '''
+        INSERT INTO game_daily_kills(day_key, user_key, display_name, kills, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(day_key, user_key) DO UPDATE SET
+            display_name=excluded.display_name,
+            kills=game_daily_kills.kills + excluded.kills,
+            updated_at=excluded.updated_at
+        ''',
+        (day_key, user_key, display_name[:120], delta, now_iso),
+    )
 
 
 def _sec_db() -> sqlite3.Connection:
@@ -171,10 +199,23 @@ def _sec_db() -> sqlite3.Connection:
         )
         '''
     )
+    cur.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS game_daily_kills (
+            day_key TEXT NOT NULL,
+            user_key TEXT NOT NULL,
+            display_name TEXT NOT NULL DEFAULT '',
+            kills INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(day_key, user_key)
+        )
+        '''
+    )
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_profiles_rank ON game_profiles(level DESC, gold DESC, max_floor DESC, updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_chat_created ON game_chat_messages(created_at DESC, id DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_guest_links_guest ON game_guest_links(guest_key, expires_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_active_sessions_updated ON game_active_sessions(updated_at DESC)')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_game_daily_kills_day ON game_daily_kills(day_key, kills DESC, updated_at DESC)')
     con.commit()
     _SEC_DB_SCHEMA_READY = True
     return con
@@ -387,6 +428,9 @@ def game_save_set(request: Request, payload: dict = Body(...)):
         ''',
         (user_key, save_json, now_iso),
     )
+    cur.execute('SELECT kills FROM game_profiles WHERE user_key=? LIMIT 1', (user_key,))
+    prev_row = cur.fetchone()
+    previous_kills = int((prev_row['kills'] if prev_row and prev_row['kills'] is not None else 0) or 0)
     cur.execute(
         '''
         INSERT INTO game_profiles(user_key, display_name, level, gold, max_floor, kills, quests_done, updated_at, created_at)
@@ -402,6 +446,7 @@ def game_save_set(request: Request, payload: dict = Body(...)):
         ''',
         (user_key, display_name, lvl, gold, max_floor, kills, quests_done, now_iso, now_iso),
     )
+    _game_track_daily_kills(cur, user_key, display_name, previous_kills, kills)
     con.commit(); con.close()
     return {'ok': True, 'saved_at': now_iso, 'user_key': user_key}
 
@@ -465,6 +510,9 @@ def game_claim_guest_save(request: Request, payload: dict = Body(...)):
         ''',
         (user_key, save_json, now_iso),
     )
+    cur.execute('SELECT kills FROM game_profiles WHERE user_key=? LIMIT 1', (user_key,))
+    prev_row = cur.fetchone()
+    previous_kills = int((prev_row['kills'] if prev_row and prev_row['kills'] is not None else 0) or 0)
     cur.execute(
         '''
         INSERT INTO game_profiles(user_key, display_name, level, gold, max_floor, kills, quests_done, updated_at, created_at)
@@ -480,6 +528,7 @@ def game_claim_guest_save(request: Request, payload: dict = Body(...)):
         ''',
         (user_key, display_name, lvl, gold, max_floor, kills, quests_done, now_iso, now_iso),
     )
+    _game_track_daily_kills(cur, user_key, display_name, previous_kills, kills)
     cur.execute('DELETE FROM game_saves WHERE user_key=?', (guest_key,))
     cur.execute('DELETE FROM game_profiles WHERE user_key=?', (guest_key,))
     con.commit(); con.close()
@@ -572,6 +621,9 @@ def game_claim_guest_link(request: Request, payload: dict = Body(...)):
             ''',
             (user_key, save_json, now_iso),
         )
+        cur.execute('SELECT kills FROM game_profiles WHERE user_key=? LIMIT 1', (user_key,))
+        prev_row = cur.fetchone()
+        previous_kills = int((prev_row['kills'] if prev_row and prev_row['kills'] is not None else 0) or 0)
         cur.execute(
             '''
             INSERT INTO game_profiles(user_key, display_name, level, gold, max_floor, kills, quests_done, updated_at, created_at)
@@ -587,6 +639,7 @@ def game_claim_guest_link(request: Request, payload: dict = Body(...)):
             ''',
             (user_key, display_name, lvl, gold, max_floor, kills, quests_done, now_iso, now_iso),
         )
+        _game_track_daily_kills(cur, user_key, display_name, previous_kills, kills)
         claimed = True
 
     cur.execute('DELETE FROM game_saves WHERE user_key=?', (guest_key,))
@@ -706,6 +759,27 @@ def game_leaderboard(limit: int = 20):
     rows = [dict(r) for r in cur.fetchall()]
     con.close()
     return {'ok': True, 'items': rows}
+
+
+@app.get('/api/game/daily-leaderboard')
+def game_daily_leaderboard(limit: int = 20):
+    lim = max(1, min(int(limit or 20), 200))
+    day_key = _game_today_key()
+    con = _sec_db()
+    cur = con.cursor()
+    cur.execute(
+        '''
+        SELECT user_key, display_name, kills, updated_at
+        FROM game_daily_kills
+        WHERE day_key=?
+        ORDER BY kills DESC, updated_at DESC
+        LIMIT ?
+        ''',
+        (day_key, lim),
+    )
+    rows = [dict(r) for r in cur.fetchall()]
+    con.close()
+    return {'ok': True, 'day': day_key, 'items': rows}
 
 
 @app.get('/api/game/wiki')

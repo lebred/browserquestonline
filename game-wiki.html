@@ -1,19 +1,20 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Orson Quest Wiki</title>
   <style>
-    :root{--bg:#0b1220;--panel:#101a2d;--text:#e8eefc;--muted:#9fb2d8;--accent:#44d08a}
+    :root{--bg:#0a1020;--panel:#101a2d;--line:#274064;--text:#e9f1ff;--muted:#9fb4da;--btn:#1d3560;--btn2:#254a86}
     *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(180deg,#131f36,#0b1220 45%);color:var(--text);font-family:ui-sans-serif,system-ui}
-    .wrap{max-width:1150px;margin:0 auto;padding:16px}
+    body{margin:0;background:linear-gradient(180deg,#121c33,#0a1020 48%);color:var(--text);font-family:ui-sans-serif,system-ui}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px}
     .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-    .btn{display:inline-block;padding:8px 12px;border-radius:10px;border:1px solid #2e4a78;background:#142846;color:#e6f1ff;text-decoration:none;font-weight:700}
-    .panel{background:var(--panel);border:1px solid #203252;border-radius:14px;padding:14px;margin-top:12px}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;border:1px solid #35598e;background:var(--btn);color:#e9f1ff;text-decoration:none;font-weight:800;cursor:pointer}
+    .btn.primary{background:linear-gradient(180deg,var(--btn2),#1f3f75)}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
     h1,h2,h3{margin:.2em 0 .45em}
-    p,li,td{color:#dce7ff;line-height:1.5}
+    p,li,td{line-height:1.5}
     .muted{color:var(--muted)}
     table{width:100%;border-collapse:collapse;font-size:14px}
     th,td{border-bottom:1px solid rgba(120,160,220,.24);padding:8px 6px;text-align:left;vertical-align:top}
@@ -23,6 +24,8 @@
     .c-magic{color:#59b5ff;border-color:#59b5ff}
     .c-rare{color:#b786ff;border-color:#b786ff}
     .c-epic{color:#ffb14a;border-color:#ffb14a}
+    [data-lang]{display:none}
+    [data-lang].on{display:block}
     @media(max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -31,137 +34,137 @@
   <div class="top">
     <div>
       <h1>📚 ORSON QUEST WIKI</h1>
-      <div class="muted">Guide complet: ennemis, loot, rareté, économie et progression</div>
+      <div class="muted" data-i18n="subtitle"></div>
     </div>
-    <div>
-      <a class="btn" href="/game">Jouer</a>
-      <a class="btn" href="/">Lab</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="langBtn">🌐 FR</button>
+      <a class="btn primary" href="/game" data-i18n="play"></a>
     </div>
   </div>
 
-  <section class="panel">
-    <h2>Résumé du système actuel</h2>
+  <section class="panel" data-lang="en">
+    <h2>Current Core Systems</h2>
     <ul>
-      <li>Action-RPG browser temps réel, progression persistante.</li>
-      <li>Items avec <strong>rareté</strong>: Commun, Magique, Rare, Épique.</li>
-      <li>Les stats et la valeur des items montent avec la rareté.</li>
-      <li>Le marchand vend les versions <strong>Communes</strong>; les versions hautes viennent surtout du loot.</li>
-      <li>Revente au marchand: <strong>55%</strong> de la valeur de l'item.</li>
+      <li>Real-time browser action RPG with persistent progression and multiplayer presence/chat.</li>
+      <li>Loot rarity tiers: <span class="chip c-common">Common</span> <span class="chip c-magic">Magic</span> <span class="chip c-rare">Rare</span> <span class="chip c-epic">Epic</span>.</li>
+      <li>Death penalty: lose 10% of current level XP need. If this would drop XP to 0, death is prevented and player survives at low HP.</li>
+      <li>Journal now logs XP/gold gained on each mob kill.</li>
+      <li>Daily leaderboard tracks mobs killed today per player.</li>
     </ul>
   </section>
 
-  <section class="panel">
-    <h2>Rareté et multiplicateurs</h2>
+  <section class="panel" data-lang="fr">
+    <h2>Systèmes actuels</h2>
+    <ul>
+      <li>Action-RPG browser en temps réel avec progression persistante et présence/chat multijoueur.</li>
+      <li>Raretés de loot: <span class="chip c-common">Commun</span> <span class="chip c-magic">Magique</span> <span class="chip c-rare">Rare</span> <span class="chip c-epic">Épique</span>.</li>
+      <li>Pénalité de mort: perte de 10% de l'XP requise du niveau courant. Si ça ferait tomber l'XP à 0, la mort est évitée et le joueur survit avec peu de HP.</li>
+      <li>Le journal affiche maintenant l'XP/or gagnés à chaque kill.</li>
+      <li>Classement quotidien: nombre de monstres tués aujourd'hui par joueur.</li>
+    </ul>
+  </section>
+
+  <section class="panel" data-lang="en">
+    <h2>Rarity Multipliers</h2>
     <table>
-      <thead><tr><th>Rareté</th><th>Multiplicateur puissance (ATK/DEF/HP)</th><th>Multiplicateur valeur (or)</th><th>Couleur</th></tr></thead>
+      <thead><tr><th>Rarity</th><th>Power (ATK/DEF/HP)</th><th>Value</th></tr></thead>
       <tbody>
-        <tr><td><span class="chip c-common">Commun</span></td><td>x1.00</td><td>x1.00</td><td>Bleu gris</td></tr>
-        <tr><td><span class="chip c-magic">Magique</span></td><td>x1.14</td><td>x1.75</td><td>Bleu</td></tr>
-        <tr><td><span class="chip c-rare">Rare</span></td><td>x1.32</td><td>x3.10</td><td>Violet</td></tr>
-        <tr><td><span class="chip c-epic">Épique</span></td><td>x1.58</td><td>x5.20</td><td>Orange</td></tr>
+        <tr><td><span class="chip c-common">Common</span></td><td>x1.00</td><td>x1.00</td></tr>
+        <tr><td><span class="chip c-magic">Magic</span></td><td>x1.14</td><td>x1.75</td></tr>
+        <tr><td><span class="chip c-rare">Rare</span></td><td>x1.32</td><td>x3.10</td></tr>
+        <tr><td><span class="chip c-epic">Epic</span></td><td>x1.58</td><td>x5.20</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel" data-lang="fr">
+    <h2>Multiplicateurs de rareté</h2>
+    <table>
+      <thead><tr><th>Rareté</th><th>Puissance (ATK/DEF/HP)</th><th>Valeur</th></tr></thead>
+      <tbody>
+        <tr><td><span class="chip c-common">Commun</span></td><td>x1.00</td><td>x1.00</td></tr>
+        <tr><td><span class="chip c-magic">Magique</span></td><td>x1.14</td><td>x1.75</td></tr>
+        <tr><td><span class="chip c-rare">Rare</span></td><td>x1.32</td><td>x3.10</td></tr>
+        <tr><td><span class="chip c-epic">Épique</span></td><td>x1.58</td><td>x5.20</td></tr>
       </tbody>
     </table>
   </section>
 
   <div class="grid">
-    <section class="panel">
-      <h2>Taux de rareté (loot)</h2>
+    <section class="panel" data-lang="en">
+      <h2>Enemy Types</h2>
       <table>
-        <thead><tr><th>Floors</th><th>Commun</th><th>Magique</th><th>Rare</th><th>Épique</th></tr></thead>
+        <thead><tr><th>Type</th><th>Role</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td>1-4</td><td>82%</td><td>16%</td><td>2%</td><td>0%</td></tr>
-          <tr><td>5-9</td><td>70%</td><td>23%</td><td>6%</td><td>1%</td></tr>
-          <tr><td>10-14</td><td>58%</td><td>28%</td><td>11%</td><td>3%</td></tr>
-          <tr><td>15+</td><td>45%</td><td>30%</td><td>17%</td><td>8%</td></tr>
+          <tr><td>Rat</td><td>Early weak mob</td><td>Fast, quest target.</td></tr>
+          <tr><td>Slime</td><td>Baseline mob</td><td>Core dungeon filler.</td></tr>
+          <tr><td>Brute</td><td>Tank mob</td><td>Slower, heavy hits.</td></tr>
+          <tr><td>Ogre</td><td>Elite tank</td><td>Very high HP.</td></tr>
+          <tr><td>Dragon</td><td>Ranged elite</td><td>Melee + colored projectiles.</td></tr>
         </tbody>
       </table>
-      <p class="muted">Le loot tombe avec ~50% de chance à la mort d'un ennemi.</p>
     </section>
 
-    <section class="panel">
-      <h2>Ennemis</h2>
+    <section class="panel" data-lang="fr">
+      <h2>Types d'ennemis</h2>
       <table>
-        <thead><tr><th>Type</th><th>Profil</th><th>Comportement</th></tr></thead>
+        <thead><tr><th>Type</th><th>Rôle</th><th>Notes</th></tr></thead>
         <tbody>
-          <tr><td>Rat</td><td>Faible HP, faible dégâts</td><td>Rapide, bon pour le début et les quêtes.</td></tr>
-          <tr><td>Slime</td><td>Standard</td><td>Présent tôt dans les donjons, rythme stable.</td></tr>
-          <tr><td>Brute</td><td>HP élevé</td><td>Plus lent, coups plus lourds.</td></tr>
-          <tr><td>Ogre</td><td>Très tanky</td><td>Lent, pousse à kite/gérer la distance.</td></tr>
-          <tr><td>Dragon</td><td>Elite</td><td>Attaque mêlée + projectiles élémentaires.</td></tr>
+          <tr><td>Rat</td><td>Mob faible de départ</td><td>Rapide, cible de quête.</td></tr>
+          <tr><td>Slime</td><td>Mob standard</td><td>Base des donjons.</td></tr>
+          <tr><td>Brute</td><td>Mob tank</td><td>Plus lent, coups lourds.</td></tr>
+          <tr><td>Ogre</td><td>Tank élite</td><td>Très gros HP.</td></tr>
+          <tr><td>Dragon</td><td>Élite à distance</td><td>Mêlée + projectiles colorés.</td></tr>
         </tbody>
       </table>
+    </section>
+
+    <section class="panel" data-lang="en">
+      <h2>Gameplay Notes</h2>
+      <ul>
+        <li><b>P</b>: auto-use best potion.</li>
+        <li><b>T</b>: cast Town Portal (3s channel, interrupted by move or enemy hit).</li>
+        <li>Every 5 floors, teleporter checkpoints unlock.</li>
+        <li>Merchant supports buy/sell and downgrade cleanup.</li>
+      </ul>
+    </section>
+
+    <section class="panel" data-lang="fr">
+      <h2>Notes de gameplay</h2>
+      <ul>
+        <li><b>P</b>: utiliser automatiquement la meilleure potion.</li>
+        <li><b>T</b>: canaliser Town Portal (3s, interrompu si mouvement ou coup ennemi).</li>
+        <li>Tous les 5 floors, des checkpoints de téléporteur se débloquent.</li>
+        <li>Le marchand permet achat/vente et nettoyage des downgrades.</li>
+      </ul>
     </section>
   </div>
-
-  <section class="panel">
-    <h2>Catalogue items (base Commun)</h2>
-    <h3>Armes</h3>
-    <table>
-      <thead><tr><th>Item</th><th>ATK</th><th>DEF</th><th>HP</th><th>Prix</th></tr></thead>
-      <tbody>
-        <tr><td>Dague rouillée</td><td>2</td><td>0</td><td>0</td><td>12</td></tr>
-        <tr><td>Épée courte</td><td>4</td><td>0</td><td>0</td><td>45</td></tr>
-        <tr><td>Épée de garde</td><td>6</td><td>1</td><td>0</td><td>85</td></tr>
-        <tr><td>Lame runique</td><td>10</td><td>1</td><td>4</td><td>180</td></tr>
-        <tr><td>Épée draconique</td><td>15</td><td>2</td><td>8</td><td>320</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Boucliers</h3>
-    <table>
-      <thead><tr><th>Item</th><th>ATK</th><th>DEF</th><th>HP</th><th>Prix</th></tr></thead>
-      <tbody>
-        <tr><td>Bouclier en bois</td><td>0</td><td>2</td><td>8</td><td>35</td></tr>
-        <tr><td>Bouclier renforcé</td><td>0</td><td>4</td><td>16</td><td>78</td></tr>
-        <tr><td>Bouclier runique</td><td>0</td><td>7</td><td>26</td><td>190</td></tr>
-        <tr><td>Égide antique</td><td>1</td><td>10</td><td>36</td><td>340</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Armures</h3>
-    <table>
-      <thead><tr><th>Item</th><th>ATK</th><th>DEF</th><th>HP</th><th>Prix</th></tr></thead>
-      <tbody>
-        <tr><td>Bottes légères</td><td>0</td><td>1</td><td>0</td><td>18</td></tr>
-        <tr><td>Tunique renforcée</td><td>0</td><td>3</td><td>12</td><td>60</td></tr>
-        <tr><td>Armure du gardien</td><td>0</td><td>8</td><td>34</td><td>220</td></tr>
-        <tr><td>Armure de dragon</td><td>2</td><td>12</td><td>52</td><td>390</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Anneaux & consommables</h3>
-    <table>
-      <thead><tr><th>Item</th><th>ATK</th><th>DEF</th><th>HP</th><th>Effet</th><th>Prix</th></tr></thead>
-      <tbody>
-        <tr><td>Amulette terne</td><td>0</td><td>0</td><td>10</td><td>Bonus PV</td><td>26</td></tr>
-        <tr><td>Anneau d'acier</td><td>1</td><td>1</td><td>6</td><td>Bonus mixte</td><td>54</td></tr>
-        <tr><td>Anneau runique</td><td>3</td><td>2</td><td>16</td><td>Bonus mixte</td><td>210</td></tr>
-        <tr><td>Anneau du phénix</td><td>5</td><td>4</td><td>26</td><td>Bonus mixte</td><td>360</td></tr>
-        <tr><td>Potion HP</td><td>-</td><td>-</td><td>-</td><td>Soin 25 PV (scalé par rareté)</td><td>16</td></tr>
-        <tr><td>Potion HP++</td><td>-</td><td>-</td><td>-</td><td>Soin 80 PV (scalé par rareté)</td><td>85</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section class="panel">
-    <h2>Économie et progression</h2>
-    <ul>
-      <li>Le marchand vend selon la progression max atteinte par le joueur.</li>
-      <li>Checkpoint téléporteur tous les 5 floors (5/10/15...).</li>
-      <li>Le niveau conseillé monte par palier de donjon.</li>
-      <li>Stratégie recommandée: farmer floors adaptés, vendre le surplus, viser les rolls <span class="chip c-rare">Rare</span> et <span class="chip c-epic">Épique</span>.</li>
-    </ul>
-  </section>
-
-  <section class="panel">
-    <h2>Prochaine extension prévue</h2>
-    <ul>
-      <li>Affixes magiques (ex: Vampirique, Gardien, Berserker).</li>
-      <li>Sets d'items et bonus 2/3/4 pièces.</li>
-      <li>Drop pools dédiés par biome/floor boss.</li>
-      <li>Objets légendaires (ultra rares) avec effets uniques.</li>
-    </ul>
-  </section>
 </div>
+
+<script>
+(() => {
+  const dict = {
+    en: { subtitle: 'Complete bilingual guide: systems, progression, enemies, loot, economy', play: 'Play' },
+    fr: { subtitle: 'Guide bilingue complet: systèmes, progression, ennemis, loot, économie', play: 'Jouer' },
+  };
+  let lang = (localStorage.getItem('orson_lang_v1') || 'en') === 'fr' ? 'fr' : 'en';
+  const btn = document.getElementById('langBtn');
+  function apply(){
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-lang]').forEach(el => el.classList.toggle('on', el.getAttribute('data-lang') === lang));
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const k = el.getAttribute('data-i18n');
+      el.textContent = dict[lang][k] || k;
+    });
+    btn.textContent = lang === 'fr' ? '🌐 EN' : '🌐 FR';
+  }
+  btn.addEventListener('click', () => {
+    lang = lang === 'fr' ? 'en' : 'fr';
+    localStorage.setItem('orson_lang_v1', lang);
+    apply();
+  });
+  apply();
+})();
+</script>
 </body>
 </html>

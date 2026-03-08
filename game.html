@@ -557,6 +557,11 @@
       tierNow:'Current tier',
       lootFound:'Loot',
       logout:'Logout',
+      dailyLeaderboard:'Daily Kills',
+      globalLeaderboard:'Overall Leaderboard',
+      killsToday:'kills today',
+      deathPenalty:'Death penalty',
+      deathAvoided:'Near death avoided',
     },
     fr:{
       menu:'Menu', gear:'Équipement', quests:'Quêtes', bags:'Inventaire', shop:'Marchand', rank:'Classement', log:'Journal',
@@ -617,6 +622,11 @@
       tierNow:'Palier actuel',
       lootFound:'Loot',
       logout:'Déconnexion',
+      dailyLeaderboard:'Classement quotidien',
+      globalLeaderboard:'Classement global',
+      killsToday:'kills aujourd\'hui',
+      deathPenalty:'Pénalité de mort',
+      deathAvoided:'Mort évitée',
     },
   };
   const tr=(k)=> (I18N[state.lang]&&I18N[state.lang][k]) || (I18N.en[k]||k);
@@ -1479,6 +1489,7 @@
         e.hp-=dmg; e.hitFx=.18; hits++;
         if(e.hp<=0){
           state.player.xp+=e.xp; state.player.gold+=e.gold; state.metrics.kills=Number(state.metrics.kills||0)+1;
+          log(`🧠 +${Number(e.xp||0)} XP · +${Number(e.gold||0)} ${tr('gold')}`);
           if(e.kind==='rat') state.metrics.rat_kills=Number(state.metrics.rat_kills||0)+1;
           maybeLoot(); checkQuests();
         }
@@ -1530,6 +1541,24 @@
       levelFx.classList.add('show');
       clearTimeout(levelFx._t); levelFx._t=setTimeout(()=>levelFx.classList.remove('show'),1100);
     }
+  }
+
+  function applyDeathPenalty(){
+    const penalty = Math.max(1, Math.floor(Number(state.player.xpNeed || 100) * 0.10));
+    const prevXp = Math.max(0, Number(state.player.xp || 0));
+    const nextXp = prevXp - penalty;
+    if(nextXp <= 0){
+      state.player.xp = 0;
+      state.player.hp = Math.max(1, Math.floor(Number(state.player.hpMax || 100) * 0.35));
+      log(`🛡️ ${tr('deathAvoided')}: ${tr('deathPenalty')} -${penalty} XP`);
+      showDialog(state.lang==='fr' ? `Vous évitez la mort. Pénalité: -${penalty} XP.` : `You avoid death. Penalty: -${penalty} XP.`);
+      return false;
+    }
+    state.player.xp = nextXp;
+    log(`☠️ ${tr('deathPenalty')}: -${penalty} XP`);
+    state.dead = true;
+    deathModal.classList.add('show');
+    return true;
   }
 
   function nearestNPC(maxD=1.5){ let best=null,b=999; for(const n of state.npcs){ const d=dist(n.x,n.y,state.player.x,state.player.y); if(d<maxD&&d<b){b=d;best=n;} } return best; }
@@ -1787,7 +1816,30 @@
   }
 
   async function refreshLeaderboard(){
-    try{ const r=await fetch('/api/game/leaderboard?limit=10',{credentials:'include'}); const d=await r.json(); if(!d?.ok||!Array.isArray(d.items)) return; panes.rank.innerHTML=d.items.map((it,idx)=>`<div>${idx+1}. <b>${String(it.display_name||'Joueur')}</b> <span class="k">Niv ${Number(it.level||1)} · Or ${Number(it.gold||0)}</span></div>`).join(''); }catch{}
+    try{
+      const [rg, rd] = await Promise.all([
+        fetch('/api/game/leaderboard?limit=10',{credentials:'include'}),
+        fetch('/api/game/daily-leaderboard?limit=10',{credentials:'include'}),
+      ]);
+      const g = await rg.json();
+      const d = await rd.json();
+      const globalRows = (g?.ok && Array.isArray(g.items)) ? g.items : [];
+      const dailyRows = (d?.ok && Array.isArray(d.items)) ? d.items : [];
+      const dayLabel = String(d?.day || '');
+      const globalHtml = globalRows.length
+        ? globalRows.map((it,idx)=>`<div>${idx+1}. <b>${String(it.display_name||'Player')}</b> <span class="k">Lvl ${Number(it.level||1)} · ${tr('gold')} ${Number(it.gold||0)}</span></div>`).join('')
+        : `<div class="k">${tr('noMessages')}</div>`;
+      const dailyHtml = dailyRows.length
+        ? dailyRows.map((it,idx)=>`<div>${idx+1}. <b>${String(it.display_name||'Player')}</b> <span class="k">${Number(it.kills||0)} ${tr('killsToday')}</span></div>`).join('')
+        : `<div class="k">${tr('noMessages')}</div>`;
+      panes.rank.innerHTML = `
+        <div class="k" style="margin-bottom:6px">${tr('globalLeaderboard')}</div>
+        <div>${globalHtml}</div>
+        <hr style="border-color:rgba(140,180,230,.25);margin:8px 0">
+        <div class="k" style="margin-bottom:6px">${tr('dailyLeaderboard')} ${dayLabel ? `(${dayLabel})` : ''}</div>
+        <div>${dailyHtml}</div>
+      `;
+    }catch{}
   }
 
   async function updatePresence(){
@@ -2125,7 +2177,7 @@
     for(const f of state.lootTexts) f.t += dt;
     state.lootTexts = state.lootTexts.filter(f=>Number(f.t||0) < Number(f.life||0));
 
-    if(state.player.hp<=0 && !state.dead){ state.dead=true; deathModal.classList.add('show'); }
+    if(state.player.hp<=0 && !state.dead){ applyDeathPenalty(); }
     if(state.portalCast.active && nowPerf >= Number(state.portalCast.endAt||0)) completeTownPortal();
 
     levelUpCheck();
