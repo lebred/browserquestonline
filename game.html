@@ -133,6 +133,7 @@
     <div class="panel-head">
       <div class="k" id="menuTitle">Menu</div>
       <div style="display:flex;align-items:center;gap:6px">
+        <button class="btn" id="logoutBtn" type="button" style="display:none">🚪 Logout</button>
         <button class="btn" id="langBtn" type="button">🌐 EN</button>
         <button class="panel-close" id="panelCloseBtn" type="button">✕</button>
       </div>
@@ -555,6 +556,7 @@
       floor:'Floor',
       tierNow:'Current tier',
       lootFound:'Loot',
+      logout:'Logout',
     },
     fr:{
       menu:'Menu', gear:'Équipement', quests:'Quêtes', bags:'Inventaire', shop:'Marchand', rank:'Classement', log:'Journal',
@@ -614,6 +616,7 @@
       floor:'Floor',
       tierNow:'Palier actuel',
       lootFound:'Loot',
+      logout:'Déconnexion',
     },
   };
   const tr=(k)=> (I18N[state.lang]&&I18N[state.lang][k]) || (I18N.en[k]||k);
@@ -652,6 +655,7 @@
     const wb=document.getElementById('wikiBtn'); if(wb) wb.textContent = `📘 ${tr('wiki')}`;
     const tbp=document.getElementById('townPortalBtn'); if(tbp) tbp.textContent = `🌀 ${tr('townPortal')}`;
     const menuTitle = document.getElementById('menuTitle'); if(menuTitle) menuTitle.textContent = tr('menu');
+    const logoutBtn = document.getElementById('logoutBtn'); if(logoutBtn) logoutBtn.textContent = `🚪 ${tr('logout')}`;
     const tg=document.getElementById('tabGear'); if(tg) tg.textContent = tr('gear');
     const tq=document.getElementById('tabQuests'); if(tq) tq.textContent = tr('quests');
     const tb=document.getElementById('tabBags'); if(tb) tb.textContent = tr('bags');
@@ -2296,8 +2300,8 @@
       if(d?.ok && d.logged_in){
         const nm = String(d.display_name || 'Aventurier');
         state.auth = { id: String(d.user_key || nm), name: nm, logged: true };
-        document.getElementById('googleBtn').textContent = `✅ ${state.auth.name}`;
         state.saveKey = `orson_rpg_save_user_${state.auth.id}`;
+        refreshAuthUi();
         await claimGuestToUser();
         await maybeRecoverAfterLogin();
       }
@@ -2359,8 +2363,30 @@
 
   document.getElementById('panelBtn').onclick=()=>panel.classList.toggle('open');
   document.getElementById('panelCloseBtn').onclick=()=>panel.classList.remove('open');
+  function refreshAuthUi(){
+    const gbtn = document.getElementById('googleBtn');
+    const lbtn = document.getElementById('logoutBtn');
+    if(state.auth.logged){
+      gbtn.textContent = `✅ ${state.auth.name}`;
+      if(lbtn) lbtn.style.display = '';
+    }else{
+      gbtn.textContent = '🔐 Google';
+      if(lbtn) lbtn.style.display = 'none';
+    }
+  }
   audioBtn.onclick=()=>toggleMusic();
   document.getElementById('langBtn').onclick=()=>toggleLanguage();
+  document.getElementById('logoutBtn').onclick=async ()=>{
+    if(!state.auth.logged) return;
+    try{
+      await fetch('/api/memorise/logout', { method:'POST', credentials:'include' });
+    }catch{}
+    state.auth = { id:'guest', name:`Guest-${guestId.slice(0,6)}`, logged:false };
+    state.saveKey = `orson_rpg_save_guest_${guestId}`;
+    refreshAuthUi();
+    log(state.lang==='fr' ? '🔒 Déconnecté. Mode visiteur actif.' : '🔒 Logged out. Guest mode active.');
+    await save();
+  };
   document.getElementById('googleBtn').onclick=async (e)=>{
     if(state.auth.logged){
       e.preventDefault();
@@ -2488,7 +2514,7 @@
     setAudioBtn();
     state.view.camX=state.player.x-state.view.w/2; state.view.camY=state.player.y-state.view.h/2;
     switchZone('village',0);
-    await loadAuth(); const okRemote=await loadRemote(); if(!okRemote) loadLocal();
+    await loadAuth(); refreshAuthUi(); const okRemote=await loadRemote(); if(!okRemote) loadLocal();
     await refreshLeaderboard();
     await refreshPresence();
     await refreshChat();
