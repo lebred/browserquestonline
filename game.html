@@ -102,7 +102,12 @@
       .dpad{display:none}
       .hint{display:none}
       .action-wrap{right:8px;bottom:58px}
-      .panel{top:36px;bottom:66px;width:min(980px,92vw)}
+      .panel{
+        top:34px;
+        bottom:8px;
+        width:min(420px,56vw);
+        max-height:none;
+      }
       .chat-ticker{bottom:6px;width:min(94vw,760px)}
     }
   </style>
@@ -1801,17 +1806,23 @@
     }).join('');
     panes.shop.innerHTML=`${stockHtml}<div class="k">${tr('merchantHint')}</div>`;
     const chatFocused = (document.activeElement && (document.activeElement.id === 'chatInput'));
-    if(!chatFocused){
+    if(!chatFocused || !panel.querySelector('#chatList')){
       panes.chat.innerHTML = `
         <div class="k">${tr('onlineInZone')}: ${Math.max(1, Number(state.onlineTotal||1))}</div>
-        <div style="max-height:180px;overflow:auto;border:1px solid rgba(120,160,220,.22);border-radius:8px;padding:6px;margin:6px 0;background:rgba(12,20,35,.45)">
-          ${state.chatMessages.length ? state.chatMessages.map(m => `<div><b>${String(m.display_name||'Joueur')}</b>: ${String(m.message||'')}</div>`).join('') : `<div class="k">${tr('noMessages')}</div>`}
+        <div id="chatList" style="max-height:min(42vh,260px);overflow:auto;border:1px solid rgba(120,160,220,.22);border-radius:8px;padding:6px;margin:6px 0;background:rgba(12,20,35,.45)">
+          <div class="k">${tr('noMessages')}</div>
         </div>
         <div style="display:flex;gap:6px">
           <input id="chatInput" maxlength="${CHAT_MAX_LEN}" placeholder="${tr('write')}" style="flex:1;min-width:0;border:1px solid rgba(120,160,220,.35);background:rgba(20,34,60,.6);color:#e8f1ff;border-radius:8px;padding:8px">
           <button id="chatSendBtn" class="btn primary" type="button">${tr('send')}</button>
         </div>
       `;
+    }
+    const chatListEl = panel.querySelector('#chatList');
+    if(chatListEl){
+      chatListEl.innerHTML = state.chatMessages.length
+        ? state.chatMessages.map(m => `<div><b>${String(m.display_name||'Player')}</b>: ${String(m.message||'')}</div>`).join('')
+        : `<div class="k">${tr('noMessages')}</div>`;
     }
   }
 
@@ -1933,6 +1944,7 @@
       const d = await r.json();
       if(!d?.ok || !Array.isArray(d.items)) return;
       state.chatMessages = d.items;
+      if(panel.classList.contains('open')) setTimeout(()=>{ renderPanels(); syncChatViewport(); }, 0);
     } catch {}
   }
 
@@ -1951,19 +1963,33 @@
   }
 
   function setTab(name){ for(const b of document.querySelectorAll('.tab')) b.classList.toggle('active',b.dataset.tab===name); for(const [k,p] of Object.entries(panes)) p.classList.toggle('active',k===name); }
+  function stickChatToBottom(){
+    const list = panel.querySelector('#chatList');
+    if(list) list.scrollTop = list.scrollHeight;
+  }
+  function syncChatViewport(){
+    const input = panel.querySelector('#chatInput');
+    const focused = !!(input && document.activeElement === input);
+    if(focused && window.visualViewport){
+      const vv = window.visualViewport;
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      panel.style.bottom = `${Math.max(8, kb + 8)}px`;
+    }else{
+      panel.style.bottom = '';
+    }
+    if(focused) stickChatToBottom();
+  }
   function openChatPanel(){
     panel.classList.add('open');
     setTab('chat');
     setTimeout(()=>{
-      const cp = panes.chat;
-      if(cp){
-        cp.scrollTop = cp.scrollHeight;
-      }
+      stickChatToBottom();
       const input = panel.querySelector('#chatInput');
       if(input && typeof input.scrollIntoView === 'function'){
         input.scrollIntoView({block:'end', inline:'nearest'});
         try{ input.focus({preventScroll:true}); }catch{ try{ input.focus(); }catch{} }
       }
+      syncChatViewport();
     }, 0);
   }
 
@@ -2485,6 +2511,20 @@
       if(input && 'value' in input) input.value = '';
     }
   });
+  panel.addEventListener('focusin', (e)=>{
+    if(e.target instanceof HTMLElement && e.target.id === 'chatInput'){
+      setTimeout(()=>{ syncChatViewport(); stickChatToBottom(); }, 0);
+    }
+  });
+  panel.addEventListener('focusout', (e)=>{
+    if(e.target instanceof HTMLElement && e.target.id === 'chatInput'){
+      setTimeout(()=>syncChatViewport(), 0);
+    }
+  });
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', syncChatViewport);
+    window.visualViewport.addEventListener('scroll', syncChatViewport);
+  }
 
   document.getElementById('townPortalBtn').onclick=()=>{
     startTownPortalCast();
@@ -2576,10 +2616,12 @@
   window.addEventListener('resize', ()=>{
     updateViewMetrics();
     state.fullscreenTried = false;
+    syncChatViewport();
   });
   window.addEventListener('orientationchange', ()=>{
     updateViewMetrics();
     state.fullscreenTried = false;
+    syncChatViewport();
   });
   window.addEventListener('beforeunload', ()=>save());
   document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') save(); });
