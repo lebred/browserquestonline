@@ -1,23 +1,31 @@
 # BrowserQuest Online
 
-Browser RPG prototype (Orson Quest) extracted from the live game at lab.trendearly.xyz/game.
+Public repository for the standalone BrowserQuest game stack.
 
 ## Included Files
-- game.html: main browser game frontend
-- game-wiki.html: game wiki page
-- main.py: backend source that currently serves game API endpoints (/api/game/*)
-- requirements.txt: Python dependencies from production app
+- `game.html`: main browser game frontend
+- `game-wiki.html`: in-game wiki page
+- `game_app.py`: isolated FastAPI backend for `/game`, `/wiki`, and `/api/game/*`
+- `requirements.txt`: Python dependencies
 
-## Quick Run (Dev)
-1. python3 -m venv .venv
-2. source .venv/bin/activate
-3. pip install -r requirements.txt
-4. uvicorn main:app --host 0.0.0.0 --port 8000
+## Local Run
+1. `python3 -m venv .venv`
+2. `source .venv/bin/activate`
+3. `pip install -r requirements.txt`
+4. `uvicorn game_app:app --host 0.0.0.0 --port 8000`
 
-Then open:
-- http://localhost:8000/game
-- http://localhost:8000/wiki
+Open:
+- `http://localhost:8000/game`
+- `http://localhost:8000/wiki`
+
+## Environment Variables
+- `BQ_APP_ROOT` (default `/srv/browserquest`)
+- `BQ_DB_PATH` (default `$BQ_APP_ROOT/security.db`)
+- `BQ_AUTH_USERS_TABLE` (default `auth_users`)
+- `BQ_AUTH_SESSIONS_TABLE` (default `auth_sessions`)
+- `BQ_AUTH_COOKIE` (default `bq_session`)
+- `BQ_AUTH_START_PATH` (default `/api/auth/google/start`)
 
 ## Notes
-- This repository mirrors live game code from VPS at commit time.
-- main.py includes non-game routes as well, because it is copied from the running production app.
+- Keep credentials and secrets in `.env` only.
+- Do not commit production database files.

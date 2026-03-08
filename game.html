@@ -118,7 +118,7 @@
       <a class="btn" id="wikiBtn" href="/wiki">📘 Wiki</a>
       <button class="btn" id="townPortalBtn">🌀 Town Portal</button>
       <button class="btn" id="audioBtn">🔇 Sound</button>
-      <a class="btn primary" id="googleBtn" href="/api/memorise/auth/google/start?next_path=/game">🔐 Google</a>
+      <a class="btn primary" id="googleBtn" href="/api/game/auth/google/start?next_path=/game">🔐 Google</a>
     </div>
   </div>
 
@@ -2373,7 +2373,7 @@
       const code = await createGuestRecoveryLink();
       if(code) nextPath = `/game?recover=${encodeURIComponent(code)}`;
     }catch{}
-    window.location.href = `/api/memorise/auth/google/start?next_path=${encodeURIComponent(nextPath)}`;
+    window.location.href = `/api/game/auth/google/start?next_path=${encodeURIComponent(nextPath)}`;
   };
   for(const b of document.querySelectorAll('.tab')) b.onclick=()=>{
     if(String(b.dataset.tab||'') === 'chat'){ openChatPanel(); return; }
