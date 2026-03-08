@@ -8,13 +8,13 @@
     :root{--bg:#0a1020;--panel:#101a2d;--line:#274064;--text:#e9f1ff;--muted:#9fb4da;--btn:#1d3560;--btn2:#254a86}
     *{box-sizing:border-box}
     body{margin:0;background:linear-gradient(180deg,#121c33,#0a1020 48%);color:var(--text);font-family:ui-sans-serif,system-ui}
-    .wrap{max-width:1200px;margin:0 auto;padding:16px}
+    .wrap{max-width:1240px;margin:0 auto;padding:16px}
     .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
     .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:10px;border:1px solid #35598e;background:var(--btn);color:#e9f1ff;text-decoration:none;font-weight:800;cursor:pointer}
     .btn.primary{background:linear-gradient(180deg,var(--btn2),#1f3f75)}
     .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:12px}
     h1,h2,h3{margin:.2em 0 .45em}
-    p,li,td{line-height:1.5}
+    p,li,td{line-height:1.45}
     .muted{color:var(--muted)}
     table{width:100%;border-collapse:collapse;font-size:14px}
     th,td{border-bottom:1px solid rgba(120,160,220,.24);padding:8px 6px;text-align:left;vertical-align:top}
@@ -24,9 +24,9 @@
     .c-magic{color:#59b5ff;border-color:#59b5ff}
     .c-rare{color:#b786ff;border-color:#b786ff}
     .c-epic{color:#ffb14a;border-color:#ffb14a}
-    [data-lang]{display:none}
-    [data-lang].on{display:block}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+    code{background:rgba(18,32,56,.75);border:1px solid rgba(120,160,220,.35);border-radius:6px;padding:1px 6px}
+    .small{font-size:12px;color:var(--muted)}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -34,136 +34,333 @@
   <div class="top">
     <div>
       <h1>📚 ORSON QUEST WIKI</h1>
-      <div class="muted" data-i18n="subtitle"></div>
+      <div class="muted" id="subtitle"></div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" id="langBtn">🌐 FR</button>
-      <a class="btn primary" href="/game" data-i18n="play"></a>
+      <a class="btn primary" href="/game" id="playBtn">Play</a>
     </div>
   </div>
 
-  <section class="panel" data-lang="en">
-    <h2>Current Core Systems</h2>
-    <ul>
-      <li>Real-time browser action RPG with persistent progression and multiplayer presence/chat.</li>
-      <li>Loot rarity tiers: <span class="chip c-common">Common</span> <span class="chip c-magic">Magic</span> <span class="chip c-rare">Rare</span> <span class="chip c-epic">Epic</span>.</li>
-      <li>Death penalty: lose 10% of current level XP need. If this would drop XP to 0, death is prevented and player survives at low HP.</li>
-      <li>Journal now logs XP/gold gained on each mob kill.</li>
-      <li>Daily leaderboard tracks mobs killed today per player.</li>
-    </ul>
-  </section>
-
-  <section class="panel" data-lang="fr">
-    <h2>Systèmes actuels</h2>
-    <ul>
-      <li>Action-RPG browser en temps réel avec progression persistante et présence/chat multijoueur.</li>
-      <li>Raretés de loot: <span class="chip c-common">Commun</span> <span class="chip c-magic">Magique</span> <span class="chip c-rare">Rare</span> <span class="chip c-epic">Épique</span>.</li>
-      <li>Pénalité de mort: perte de 10% de l'XP requise du niveau courant. Si ça ferait tomber l'XP à 0, la mort est évitée et le joueur survit avec peu de HP.</li>
-      <li>Le journal affiche maintenant l'XP/or gagnés à chaque kill.</li>
-      <li>Classement quotidien: nombre de monstres tués aujourd'hui par joueur.</li>
-    </ul>
-  </section>
-
-  <section class="panel" data-lang="en">
-    <h2>Rarity Multipliers</h2>
-    <table>
-      <thead><tr><th>Rarity</th><th>Power (ATK/DEF/HP)</th><th>Value</th></tr></thead>
-      <tbody>
-        <tr><td><span class="chip c-common">Common</span></td><td>x1.00</td><td>x1.00</td></tr>
-        <tr><td><span class="chip c-magic">Magic</span></td><td>x1.14</td><td>x1.75</td></tr>
-        <tr><td><span class="chip c-rare">Rare</span></td><td>x1.32</td><td>x3.10</td></tr>
-        <tr><td><span class="chip c-epic">Epic</span></td><td>x1.58</td><td>x5.20</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section class="panel" data-lang="fr">
-    <h2>Multiplicateurs de rareté</h2>
-    <table>
-      <thead><tr><th>Rareté</th><th>Puissance (ATK/DEF/HP)</th><th>Valeur</th></tr></thead>
-      <tbody>
-        <tr><td><span class="chip c-common">Commun</span></td><td>x1.00</td><td>x1.00</td></tr>
-        <tr><td><span class="chip c-magic">Magique</span></td><td>x1.14</td><td>x1.75</td></tr>
-        <tr><td><span class="chip c-rare">Rare</span></td><td>x1.32</td><td>x3.10</td></tr>
-        <tr><td><span class="chip c-epic">Épique</span></td><td>x1.58</td><td>x5.20</td></tr>
-      </tbody>
-    </table>
+  <section class="panel">
+    <h2 id="overviewTitle"></h2>
+    <ul id="overviewList"></ul>
   </section>
 
   <div class="grid">
-    <section class="panel" data-lang="en">
-      <h2>Enemy Types</h2>
-      <table>
-        <thead><tr><th>Type</th><th>Role</th><th>Notes</th></tr></thead>
-        <tbody>
-          <tr><td>Rat</td><td>Early weak mob</td><td>Fast, quest target.</td></tr>
-          <tr><td>Slime</td><td>Baseline mob</td><td>Core dungeon filler.</td></tr>
-          <tr><td>Brute</td><td>Tank mob</td><td>Slower, heavy hits.</td></tr>
-          <tr><td>Ogre</td><td>Elite tank</td><td>Very high HP.</td></tr>
-          <tr><td>Dragon</td><td>Ranged elite</td><td>Melee + colored projectiles.</td></tr>
-        </tbody>
-      </table>
+    <section class="panel">
+      <h2 id="coreFormulaTitle"></h2>
+      <ul id="coreFormulaList"></ul>
     </section>
-
-    <section class="panel" data-lang="fr">
-      <h2>Types d'ennemis</h2>
-      <table>
-        <thead><tr><th>Type</th><th>Rôle</th><th>Notes</th></tr></thead>
-        <tbody>
-          <tr><td>Rat</td><td>Mob faible de départ</td><td>Rapide, cible de quête.</td></tr>
-          <tr><td>Slime</td><td>Mob standard</td><td>Base des donjons.</td></tr>
-          <tr><td>Brute</td><td>Mob tank</td><td>Plus lent, coups lourds.</td></tr>
-          <tr><td>Ogre</td><td>Tank élite</td><td>Très gros HP.</td></tr>
-          <tr><td>Dragon</td><td>Élite à distance</td><td>Mêlée + projectiles colorés.</td></tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="panel" data-lang="en">
-      <h2>Gameplay Notes</h2>
-      <ul>
-        <li><b>P</b>: auto-use best potion.</li>
-        <li><b>T</b>: cast Town Portal (3s channel, interrupted by move or enemy hit).</li>
-        <li>Every 5 floors, teleporter checkpoints unlock.</li>
-        <li>Merchant supports buy/sell and downgrade cleanup.</li>
-      </ul>
-    </section>
-
-    <section class="panel" data-lang="fr">
-      <h2>Notes de gameplay</h2>
-      <ul>
-        <li><b>P</b>: utiliser automatiquement la meilleure potion.</li>
-        <li><b>T</b>: canaliser Town Portal (3s, interrompu si mouvement ou coup ennemi).</li>
-        <li>Tous les 5 floors, des checkpoints de téléporteur se débloquent.</li>
-        <li>Le marchand permet achat/vente et nettoyage des downgrades.</li>
-      </ul>
+    <section class="panel">
+      <h2 id="zoneTitle"></h2>
+      <ul id="zoneList"></ul>
     </section>
   </div>
+
+  <section class="panel">
+    <h2 id="rarityTitle"></h2>
+    <table id="rarityTable"></table>
+  </section>
+
+  <section class="panel">
+    <h2 id="lootTitle"></h2>
+    <p class="small" id="lootIntro"></p>
+    <table id="lootTable"></table>
+  </section>
+
+  <section class="panel">
+    <h2 id="shopTitle"></h2>
+    <p class="small" id="shopIntro"></p>
+    <table id="shopTable"></table>
+  </section>
+
+  <section class="panel">
+    <h2 id="itemsTitle"></h2>
+    <p class="small" id="itemsIntro"></p>
+    <table id="itemsTable"></table>
+  </section>
+
+  <section class="panel">
+    <h2 id="enemyTitle"></h2>
+    <table id="enemyTable"></table>
+  </section>
+
+  <section class="panel">
+    <h2 id="questTitle"></h2>
+    <table id="questTable"></table>
+  </section>
+
+  <section class="panel">
+    <h2 id="controlTitle"></h2>
+    <ul id="controlList"></ul>
+  </section>
 </div>
 
 <script>
 (() => {
-  const dict = {
-    en: { subtitle: 'Complete bilingual guide: systems, progression, enemies, loot, economy', play: 'Play' },
-    fr: { subtitle: 'Guide bilingue complet: systèmes, progression, ennemis, loot, économie', play: 'Jouer' },
+  const data = {
+    rarity: [
+      {key:'common', pow:1.00, val:1.00, css:'c-common'},
+      {key:'magic',  pow:1.12, val:1.85, css:'c-magic'},
+      {key:'rare',   pow:1.38, val:4.20, css:'c-rare'},
+      {key:'epic',   pow:2.55, val:14.00, css:'c-epic'},
+    ],
+    rarityRoll: [
+      {floors:'1-4',  magic:'5.0%',  rare:'0.6%', epic:'0.015%', common:'94.385%'},
+      {floors:'5-9',  magic:'7.0%',  rare:'1.1%', epic:'0.06%',  common:'91.84%'},
+      {floors:'10-14',magic:'9.0%',  rare:'1.8%', epic:'0.12%',  common:'89.08%'},
+      {floors:'15+',  magic:'11.0%', rare:'2.8%', epic:'0.24%',  common:'85.96%'},
+    ],
+    lootPools: [
+      {tier:0, floors:'Village + Dungeon 1-5', items:['Dague rouillée','Amulette terne','Bottes légères','Bouclier en bois','Potion HP']},
+      {tier:1, floors:'Dungeon 6-10', items:['Épée de garde','Bouclier renforcé','Anneau d\'acier','Potion HP','Potion HP++']},
+      {tier:2, floors:'Dungeon 11-15', items:['Lame runique','Bouclier runique','Armure du gardien','Anneau runique','Potion HP++']},
+      {tier:3, floors:'Dungeon 16+', items:['Épée draconique','Égide antique','Armure de dragon','Anneau du phénix','Potion HP++']},
+    ],
+    shopTiers: [
+      {tier:0, unlock:'max_floor 1-5', items:['Épée courte','Bouclier en bois','Tunique renforcée','Anneau d\'acier','Potion HP']},
+      {tier:1, unlock:'max_floor 6-10', items:['Épée de garde','Bouclier renforcé','Tunique renforcée','Anneau d\'acier','Potion HP','Potion HP++']},
+      {tier:2, unlock:'max_floor 11-15', items:['Lame runique','Bouclier runique','Armure du gardien','Anneau runique','Potion HP++']},
+      {tier:3, unlock:'max_floor 16+', items:['Épée draconique','Égide antique','Armure de dragon','Anneau du phénix','Potion HP++']},
+    ],
+    items: [
+      {name:'Dague rouillée',slot:'weapon',atk:2,def:0,hp:0,heal:0,value:12},
+      {name:'Épée courte',slot:'weapon',atk:4,def:0,hp:0,heal:0,value:45},
+      {name:'Épée de garde',slot:'weapon',atk:6,def:1,hp:0,heal:0,value:85},
+      {name:'Lame runique',slot:'weapon',atk:10,def:1,hp:4,heal:0,value:180},
+      {name:'Épée draconique',slot:'weapon',atk:15,def:2,hp:8,heal:0,value:320},
+      {name:'Bouclier en bois',slot:'shield',atk:0,def:2,hp:8,heal:0,value:35},
+      {name:'Bouclier renforcé',slot:'shield',atk:0,def:4,hp:16,heal:0,value:78},
+      {name:'Bouclier runique',slot:'shield',atk:0,def:7,hp:26,heal:0,value:190},
+      {name:'Égide antique',slot:'shield',atk:1,def:10,hp:36,heal:0,value:340},
+      {name:'Bottes légères',slot:'armor',atk:0,def:1,hp:0,heal:0,value:18},
+      {name:'Tunique renforcée',slot:'armor',atk:0,def:3,hp:12,heal:0,value:60},
+      {name:'Armure du gardien',slot:'armor',atk:0,def:8,hp:34,heal:0,value:220},
+      {name:'Armure de dragon',slot:'armor',atk:2,def:12,hp:52,heal:0,value:390},
+      {name:'Amulette terne',slot:'ring',atk:0,def:0,hp:10,heal:0,value:26},
+      {name:'Anneau d\'acier',slot:'ring',atk:1,def:1,hp:6,heal:0,value:54},
+      {name:'Anneau runique',slot:'ring',atk:3,def:2,hp:16,heal:0,value:210},
+      {name:'Anneau du phénix',slot:'ring',atk:5,def:4,hp:26,heal:0,value:360},
+      {name:'Potion HP',slot:'consumable',atk:0,def:0,hp:0,heal:25,value:16},
+      {name:'Potion HP++',slot:'consumable',atk:0,def:0,hp:0,heal:80,value:85},
+    ],
+    enemies: [
+      {type:'Rat', where:'Village', hp:'12', atk:'3', xp:'8', gold:'2-6', notes:'Fast, starter target for quest.'},
+      {type:'Slime', where:'Dungeon', hp:'18 + floor*5 (scaled by tier spike)', atk:'3+floor (scaled)', xp:'8+2*floor (scaled)', gold:'2..(5+floor) scaled', notes:'Default dungeon mob.'},
+      {type:'Brute', where:'Dungeon (random)', hp:'~2.5x base', atk:'+2 + floor/2', xp:'~2.0x', gold:'+8..+19', notes:'Tankier melee.'},
+      {type:'Ogre', where:'Dungeon mini-boss roll', hp:'~3.5x base', atk:'+5 + floor/3', xp:'~2.5x', gold:'+14..+31', notes:'Slow heavy bruiser.'},
+      {type:'Dragon', where:'Dungeon mini-boss roll (tier>=2)', hp:'~4.6x base', atk:'+7 + floor/2', xp:'~3.1x', gold:'+24..+53', notes:'Melee + ranged projectiles (fire/frost/shadow by floor).'},
+    ],
+    quests: [
+      {id:'q_rat_hunt', title:'Rat Hunter', objective:'Kill 5 rats', reward:'25 gold + 20 XP'},
+      {id:'q_floor_two', title:'First Descent', objective:'Reach dungeon floor 2', reward:'40 gold + 35 XP'},
+      {id:'q_potions', title:'Potion Collector', objective:'Find 3 potions', reward:'20 gold + 20 XP'},
+    ],
   };
-  let lang = (localStorage.getItem('orson_lang_v1') || 'en') === 'fr' ? 'fr' : 'en';
-  const btn = document.getElementById('langBtn');
-  function apply(){
-    document.documentElement.lang = lang;
-    document.querySelectorAll('[data-lang]').forEach(el => el.classList.toggle('on', el.getAttribute('data-lang') === lang));
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-      const k = el.getAttribute('data-i18n');
-      el.textContent = dict[lang][k] || k;
-    });
-    btn.textContent = lang === 'fr' ? '🌐 EN' : '🌐 FR';
+
+  const i18n = {
+    en: {
+      subtitle:'Full game-mechanics reference: items, rarity, stats, prices, enemies, drop zones, formulas.',
+      play:'Play',
+      overviewTitle:'Overview',
+      overview:[
+        'Real-time browser ARPG with persistent saves, multiplayer presence, and global chat.',
+        'Death rule: lethal hit applies XP penalty = 10% of current level XP requirement.',
+        'If that penalty would bring XP to 0, death is prevented and player survives at low HP.',
+        'Journal logs now include XP and gold gains on every mob kill.',
+        'Leaderboards: global progression + daily kills (server day key).'
+      ],
+      coreFormulaTitle:'Core Formulas',
+      coreFormula:[
+        'Tier formula: <code>tier = floor((max(1,floor)-1)/5)</code>.',
+        'Recommended level: <code>1 + tier*4</code>.',
+        'Enemy target count (dungeon): <code>min(14 + floor*2 + tier*3, 44)</code>.',
+        'Shop buy price: consumables x10, equipment x25 (on base item value, common quality).',
+        'Sell price: <code>floor(item_value * 0.55)</code>.',
+      ],
+      zoneTitle:'Zones & Transitions',
+      zones:[
+        'Village: healer, merchant, teleporter, guard, and dungeon entry.',
+        'Dungeon floors: procedural generation with up/down stairs and checkpoint portal tile on floor multiples of 5.',
+        'Floor 5/10/15/... unlock teleporter checkpoints.',
+        'Town portal cast: 3s channel, interrupted by movement or enemy hit.'
+      ],
+      rarityTitle:'Rarity Multipliers (exact)',
+      rarityHdr:['Rarity','Power Multiplier (ATK/DEF/HP)','Value Multiplier'],
+      rarityLabel:{common:'Common',magic:'Magic',rare:'Rare',epic:'Epic'},
+      lootTitle:'Loot Generation',
+      lootIntro:'Any enemy kill triggers loot roll with 12.5% chance. Chosen item comes from tier pool based on current floor (village uses floor 1 rules). Then rarity is rolled with the probabilities below.',
+      lootHdr:['Tier','Floor range','Item pool','Rarity odds (for that floor range)'],
+      shopTitle:'Merchant Inventory (by progression)',
+      shopIntro:'Merchant stock is tied to your max floor reached. Merchant sells COMMON variants only.',
+      shopHdr:['Tier','Unlock condition','Items'],
+      itemsTitle:'Complete Item Catalog (base/common stats)',
+      itemsIntro:'Final item stats/value are derived from base values multiplied by rarity multipliers. Potions are forced to common rarity in inventory logic.',
+      itemsHdr:['Item','Slot','ATK','DEF','HP','Heal','Base value'],
+      enemyTitle:'Enemy Reference',
+      enemyHdr:['Enemy','Where','HP model','ATK model','XP model','Gold model','Notes'],
+      questTitle:'Quest Reference',
+      questHdr:['ID','Quest','Objective','Reward'],
+      controlTitle:'Controls & Combat Notes',
+      controls:[
+        'PC: WASD/Arrows move, Space/E attack, P uses best potion, T casts Town Portal.',
+        'Mobile: D-pad + ATK, tap-to-move + attack, panel chat, fullscreen behavior varies by browser.',
+        'Melee attack cadence: ~340ms cooldown.',
+        'Enemy attacks can interrupt portal cast.'
+      ],
+      rarityOddsLabel:'common/magic/rare/epic'
+    },
+    fr: {
+      subtitle:'Référence complète des mécaniques: items, raretés, stats, prix, ennemis, zones de drop, formules.',
+      play:'Jouer',
+      overviewTitle:'Vue d\'ensemble',
+      overview:[
+        'ARPG browser temps réel avec sauvegarde persistante, présence multijoueur et chat global.',
+        'Règle de mort: un coup létal applique une pénalité XP = 10% de l\'XP requise du niveau courant.',
+        'Si cette pénalité ferait tomber l\'XP à 0, la mort est évitée et le joueur survit avec peu de HP.',
+        'Le journal inclut maintenant les gains XP et or à chaque kill.',
+        'Classements: progression globale + kills quotidiens (clé de journée serveur).'
+      ],
+      coreFormulaTitle:'Formules clés',
+      coreFormula:[
+        'Formule de palier: <code>tier = floor((max(1,floor)-1)/5)</code>.',
+        'Niveau conseillé: <code>1 + tier*4</code>.',
+        'Nombre cible d\'ennemis (donjon): <code>min(14 + floor*2 + tier*3, 44)</code>.',
+        'Prix d\'achat marchand: consommables x10, équipement x25 (sur valeur de base, qualité commune).',
+        'Prix de vente: <code>floor(item_value * 0.55)</code>.',
+      ],
+      zoneTitle:'Zones & transitions',
+      zones:[
+        'Village: guérisseur, marchand, téléporteur, garde et entrée du donjon.',
+        'Donjons: génération procédurale avec escaliers montée/descente et tuile portail checkpoint tous les 5 floors.',
+        'Floor 5/10/15/... débloquent des checkpoints de téléporteur.',
+        'Town portal: canalisation 3s, interrompue par mouvement ou coup ennemi.'
+      ],
+      rarityTitle:'Multiplicateurs de rareté (exact)',
+      rarityHdr:['Rareté','Multiplicateur puissance (ATK/DEF/HP)','Multiplicateur valeur'],
+      rarityLabel:{common:'Commun',magic:'Magique',rare:'Rare',epic:'Épique'},
+      lootTitle:'Génération du loot',
+      lootIntro:'Chaque kill d\'ennemi lance un roll de loot à 12.5%. L\'item vient d\'un pool selon le palier/floor courant (village = règles floor 1), puis la rareté est tirée avec les probabilités ci-dessous.',
+      lootHdr:['Palier','Plage de floors','Pool d\'items','Probabilités de rareté (plage)'],
+      shopTitle:'Inventaire marchand (selon progression)',
+      shopIntro:'Le stock marchand dépend du floor max atteint. Le marchand vend seulement des variantes COMMUNES.',
+      shopHdr:['Palier','Condition de déblocage','Items'],
+      itemsTitle:'Catalogue complet des items (stats de base/commun)',
+      itemsIntro:'Les stats/valeurs finales sont calculées avec les multiplicateurs de rareté. Les potions sont forcées en rareté commune dans la logique inventaire.',
+      itemsHdr:['Item','Slot','ATK','DEF','HP','Soin','Valeur base'],
+      enemyTitle:'Référence des ennemis',
+      enemyHdr:['Ennemi','Zone','Modèle HP','Modèle ATK','Modèle XP','Modèle or','Notes'],
+      questTitle:'Référence des quêtes',
+      questHdr:['ID','Quête','Objectif','Récompense'],
+      controlTitle:'Contrôles & notes combat',
+      controls:[
+        'PC: WASD/Flèches déplacement, Space/E attaque, P potion la plus forte, T Town Portal.',
+        'Mobile: D-pad + ATK, tap-to-move + attaque, chat via panel, plein écran selon navigateur.',
+        'Cadence attaque mêlée: ~340ms de cooldown.',
+        'Les attaques ennemies peuvent interrompre le cast du portail.'
+      ],
+      rarityOddsLabel:'commun/magique/rare/épique'
+    }
+  };
+
+  const state = { lang: (localStorage.getItem('orson_lang_v1')||'en') === 'fr' ? 'fr' : 'en' };
+  const $ = (id) => document.getElementById(id);
+
+  function toSlotLabel(slot, lang){
+    const map = {
+      en:{weapon:'Weapon',shield:'Shield',armor:'Armor',ring:'Ring',consumable:'Consumable'},
+      fr:{weapon:'Arme',shield:'Bouclier',armor:'Armure',ring:'Anneau',consumable:'Consommable'},
+    };
+    return (map[lang] && map[lang][slot]) || slot;
   }
-  btn.addEventListener('click', () => {
-    lang = lang === 'fr' ? 'en' : 'fr';
-    localStorage.setItem('orson_lang_v1', lang);
-    apply();
+
+  function renderTable(el, headers, rows){
+    el.innerHTML = `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  }
+
+  function render(){
+    const t = i18n[state.lang];
+    document.documentElement.lang = state.lang;
+    $('langBtn').textContent = state.lang === 'fr' ? '🌐 EN' : '🌐 FR';
+    $('playBtn').textContent = t.play;
+    $('subtitle').textContent = t.subtitle;
+
+    $('overviewTitle').textContent = t.overviewTitle;
+    $('overviewList').innerHTML = t.overview.map(x=>`<li>${x}</li>`).join('');
+
+    $('coreFormulaTitle').textContent = t.coreFormulaTitle;
+    $('coreFormulaList').innerHTML = t.coreFormula.map(x=>`<li>${x}</li>`).join('');
+
+    $('zoneTitle').textContent = t.zoneTitle;
+    $('zoneList').innerHTML = t.zones.map(x=>`<li>${x}</li>`).join('');
+
+    $('rarityTitle').textContent = t.rarityTitle;
+    renderTable($('rarityTable'), t.rarityHdr, data.rarity.map(r=>[
+      `<span class="chip ${r.css}">${t.rarityLabel[r.key]}</span>`,
+      `x${r.pow.toFixed(2)}`,
+      `x${r.val.toFixed(2)}`,
+    ]));
+
+    $('lootTitle').textContent = t.lootTitle;
+    $('lootIntro').textContent = t.lootIntro;
+    renderTable($('lootTable'), t.lootHdr, data.lootPools.map((p, i)=>[
+      String(p.tier),
+      p.floors,
+      p.items.join(', '),
+      `${t.rarityOddsLabel}: ${data.rarityRoll[i]?.common||'-'} / ${data.rarityRoll[i]?.magic||'-'} / ${data.rarityRoll[i]?.rare||'-'} / ${data.rarityRoll[i]?.epic||'-'}`,
+    ]));
+
+    $('shopTitle').textContent = t.shopTitle;
+    $('shopIntro').textContent = t.shopIntro;
+    renderTable($('shopTable'), t.shopHdr, data.shopTiers.map(s=>[
+      String(s.tier),
+      s.unlock,
+      s.items.join(', '),
+    ]));
+
+    $('itemsTitle').textContent = t.itemsTitle;
+    $('itemsIntro').textContent = t.itemsIntro;
+    renderTable($('itemsTable'), t.itemsHdr, data.items.map(it=>[
+      it.name,
+      toSlotLabel(it.slot, state.lang),
+      String(it.atk),
+      String(it.def),
+      String(it.hp),
+      String(it.heal || 0),
+      String(it.value),
+    ]));
+
+    $('enemyTitle').textContent = t.enemyTitle;
+    renderTable($('enemyTable'), t.enemyHdr, data.enemies.map(e=>[
+      e.type,
+      e.where,
+      e.hp,
+      e.atk,
+      e.xp,
+      e.gold,
+      e.notes,
+    ]));
+
+    $('questTitle').textContent = t.questTitle;
+    renderTable($('questTable'), t.questHdr, data.quests.map(q=>[
+      q.id,
+      q.title,
+      q.objective,
+      q.reward,
+    ]));
+
+    $('controlTitle').textContent = t.controlTitle;
+    $('controlList').innerHTML = t.controls.map(x=>`<li>${x}</li>`).join('');
+  }
+
+  $('langBtn').addEventListener('click', () => {
+    state.lang = state.lang === 'fr' ? 'en' : 'fr';
+    localStorage.setItem('orson_lang_v1', state.lang);
+    render();
   });
-  apply();
+
+  render();
 })();
 </script>
 </body>
