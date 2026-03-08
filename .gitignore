@@ -1,0 +1,5 @@
+# Safety: game-only public repo
+main.py
+*.db
+*.sqlite
+.env
