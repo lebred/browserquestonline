@@ -946,6 +946,7 @@
 
   function tileAt(x,y){ if(!state.map||x<0||y<0||y>=state.map.length||x>=state.map[0].length) return 1; return state.map[y][x]; }
   const passable=(x,y)=>tileAt(x,y)!==1;
+  const spawnSafe=(x,y)=>passable(x,y) && tileAt(x,y)!==11;
   function findTile(map, t){
     if(!Array.isArray(map) || !map.length) return null;
     for(let y=0;y<map.length;y++){
@@ -962,7 +963,21 @@
       [tile.x+1,tile.y+1],[tile.x-1,tile.y-1],[tile.x+1,tile.y-1],[tile.x-1,tile.y+1],
     ];
     for(const [x,y] of candidates){
-      if(passable(x,y)){ state.player.x=x+0.5; state.player.y=y+0.5; return; }
+      if(spawnSafe(x,y)){ state.player.x=x+0.5; state.player.y=y+0.5; return; }
+    }
+    if(spawnSafe(tile.x, tile.y)){
+      state.player.x=tile.x+0.5; state.player.y=tile.y+0.5; return;
+    }
+    const w = Array.isArray(state.map?.[0]) ? state.map[0].length : 0;
+    const h = Array.isArray(state.map) ? state.map.length : 0;
+    const maxR = Math.max(w, h, 16);
+    for(let r=2; r<=maxR; r++){
+      for(let yy=tile.y-r; yy<=tile.y+r; yy++){
+        for(let xx=tile.x-r; xx<=tile.x+r; xx++){
+          if(Math.abs(xx-tile.x)!==r && Math.abs(yy-tile.y)!==r) continue;
+          if(spawnSafe(xx,yy)){ state.player.x=xx+0.5; state.player.y=yy+0.5; return; }
+        }
+      }
     }
     state.player.x=tile.x+0.5; state.player.y=tile.y+0.5;
   }
