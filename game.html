@@ -508,7 +508,7 @@
     enemies:[],enemyProjectiles:[],npcs:[],clickTarget:null,keys:{w:false,a:false,s:false,d:false},particles:[],lootTexts:[],logs:[],
     enemyRespawnTick:0,
     lavaTick:0,
-    lavaFlash:0,
+    hurtFlash:0,
     chatStick:true,
     metrics:{rat_kills:0,max_floor:0,potions_found:0,kills:0},quests:[],questsDone:0,
     ctxAction:{type:'attack',target:null,label:'ATK',hint:'Action: Attaquer'},
@@ -1465,6 +1465,26 @@
       } else {
         ctx.fillRect(sx+16,sy+11,9,3);
       }
+      // sword
+      ctx.fillStyle='#7e8fa6';
+      if(f==='left'){
+        ctx.fillRect(sx-31,sy-3,11,2);
+        ctx.fillRect(sx-33,sy-4,2,4);
+      } else if(f==='right'){
+        ctx.fillRect(sx+20,sy-3,11,2);
+        ctx.fillRect(sx+31,sy-4,2,4);
+      } else {
+        ctx.fillRect(sx+18,sy-13,2,12);
+        ctx.fillRect(sx+17,sy-15,4,2);
+      }
+      ctx.fillStyle='#4f2f21';
+      if(f==='left'){
+        ctx.fillRect(sx-22,sy-4,2,4);
+      } else if(f==='right'){
+        ctx.fillRect(sx+20,sy-4,2,4);
+      } else {
+        ctx.fillRect(sx+18,sy-1,2,4);
+      }
       // face
       ctx.fillStyle=pal.eye;
       if(f==='left'){ ctx.fillRect(sx-11,sy-8,3,3); ctx.fillRect(sx-5,sy-9,3,3); }
@@ -2248,7 +2268,7 @@
         const burn = Math.max(2, Math.floor(Number(state.player.hpMax||100) * 0.03));
         state.player.hp -= burn;
         enemyDamagedPlayer = true;
-        state.lavaFlash = Math.max(Number(state.lavaFlash||0), 0.34);
+        state.hurtFlash = Math.max(Number(state.hurtFlash||0), 0.22);
         state.lavaTick = 0.75;
         log(`🔥 Lava -${burn}`);
       }
@@ -2291,6 +2311,7 @@
           const dmg=Math.max(1,Math.floor((e.atk-state.player.def+rng(2)) * (1+floorSpike)));
           state.player.hp-=dmg;
           enemyDamagedPlayer = true;
+          state.hurtFlash = Math.max(Number(state.hurtFlash||0), 0.12);
           e.cd=(e.kind==='dragon') ? .78 : .95;
           e.atkFx=.22;
           e.atkDir=Math.atan2(dy,dx);
@@ -2388,6 +2409,7 @@
       if(preciseHit){
         state.player.hp -= Math.max(1, Number(p.dmg||2));
         enemyDamagedPlayer = true;
+        state.hurtFlash = Math.max(Number(state.hurtFlash||0), 0.10);
         p.life = 0;
         const nowMs = Date.now();
         if (navigator.vibrate && nowMs - state.lastVibeAt > 180) {
@@ -2426,7 +2448,7 @@
     state.particles=state.particles.filter(p=>p.t<p.life);
     for(const f of state.lootTexts) f.t += dt;
     state.lootTexts = state.lootTexts.filter(f=>Number(f.t||0) < Number(f.life||0));
-    state.lavaFlash = Math.max(0, Number(state.lavaFlash||0) - dt*1.9);
+    state.hurtFlash = Math.max(0, Number(state.hurtFlash||0) - dt*2.4);
 
     if(state.player.hp<=0 && !state.dead){ applyDeathPenalty(); }
     if(state.portalCast.active && nowPerf >= Number(state.portalCast.endAt||0)) completeTownPortal();
@@ -2458,9 +2480,9 @@
     drawLootTexts();
 
     const g=ctx.createRadialGradient(W/2,H/2,80,W/2,H/2,Math.max(W,H)*0.75); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.28)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-    if(Number(state.lavaFlash||0) > 0){
-      const a = clamp(Number(state.lavaFlash||0), 0, 0.35);
-      ctx.fillStyle = `rgba(255,56,34,${a.toFixed(3)})`;
+    if(Number(state.hurtFlash||0) > 0){
+      const a = clamp(Number(state.hurtFlash||0), 0, 0.24);
+      ctx.fillStyle = `rgba(255,62,62,${a.toFixed(3)})`;
       ctx.fillRect(0,0,W,H);
     }
 
