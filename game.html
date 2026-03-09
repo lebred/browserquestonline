@@ -1077,10 +1077,10 @@
       if(Math.random() < miniBossChance){
         if(Number(state.floor||1) >= 12 && Math.random() < 0.12){
           kind = 'titan';
-          hp = Math.floor(base * 8.8);
-          atk += 14 + Math.floor(state.floor * 0.9);
-          xp = Math.floor(xp * 6.1);
-          gold += 68 + rng(90);
+          hp = Math.floor(base * 12.6);
+          atk += 20 + Math.floor(state.floor * 1.15);
+          xp = Math.floor(xp * 7.8);
+          gold += 95 + rng(120);
         } else if(tier >= 2 && Math.random() < 0.5){
           kind = 'dragon';
           hp = Math.floor(base * 4.6);
@@ -1422,18 +1422,54 @@
       else if(f==='right') ctx.fillRect(sx+10,sy-4,6,3);
       else ctx.fillRect(sx+8,sy+1,5,3);
     } else if(e.kind==='titan'){
-      const pal = {body:'#2b2320',core:'#5b3027',accent:'#ff9c53',eye:'#120a08'};
+      const f = e.facing || 'down';
+      const pal = {body:'#271f1d',core:'#623126',accent:'#ff9c53',eye:'#120a08',limb:'#3f2923',tail:'#5a2f28'};
       const body = e.hitFx>0?'#ffdccc':pal.body;
       const core = e.hitFx>0?'#ffb38e':pal.core;
+      const limb = e.hitFx>0?'#ffc9ae':pal.limb;
       ctx.fillStyle=body;
-      ctx.fillRect(sx-18,sy-16,36,30);
+      ctx.fillRect(sx-22,sy-20,44,36);
       ctx.fillStyle=core;
-      ctx.fillRect(sx-13,sy-11,26,20);
+      ctx.fillRect(sx-16,sy-14,32,24);
+      // arms
+      ctx.fillStyle=limb;
+      if(f==='left'){
+        ctx.fillRect(sx+13,sy-10,11,7);
+        ctx.fillRect(sx-27,sy-6,9,6);
+      } else if(f==='right'){
+        ctx.fillRect(sx-24,sy-10,11,7);
+        ctx.fillRect(sx+18,sy-6,9,6);
+      } else {
+        ctx.fillRect(sx-26,sy-9,10,7);
+        ctx.fillRect(sx+16,sy-9,10,7);
+      }
+      // horns
       ctx.fillStyle=pal.accent;
-      ctx.fillRect(sx-6,sy-22,4,6); ctx.fillRect(sx+2,sy-22,4,6);
-      ctx.fillRect(sx-18,sy-2,5,8); ctx.fillRect(sx+13,sy-2,5,8);
+      if(f==='left'){
+        ctx.fillRect(sx-6,sy-27,4,8); ctx.fillRect(sx+2,sy-25,4,7);
+      } else if(f==='right'){
+        ctx.fillRect(sx-6,sy-25,4,7); ctx.fillRect(sx+2,sy-27,4,8);
+      } else {
+        ctx.fillRect(sx-8,sy-27,4,8); ctx.fillRect(sx+4,sy-27,4,8);
+      }
+      // legs
+      ctx.fillStyle=limb;
+      ctx.fillRect(sx-17,sy+10,8,9);
+      ctx.fillRect(sx+9,sy+10,8,9);
+      // tail
+      ctx.fillStyle=pal.tail;
+      if(f==='left'){
+        ctx.fillRect(sx+22,sy+1,9,3); ctx.fillRect(sx+29,sy+2,5,2);
+      } else if(f==='right'){
+        ctx.fillRect(sx-31,sy+1,9,3); ctx.fillRect(sx-36,sy+2,5,2);
+      } else {
+        ctx.fillRect(sx+16,sy+11,9,3);
+      }
+      // face
       ctx.fillStyle=pal.eye;
-      ctx.fillRect(sx-7,sy-7,3,3); ctx.fillRect(sx+4,sy-7,3,3);
+      if(f==='left'){ ctx.fillRect(sx-11,sy-8,3,3); ctx.fillRect(sx-5,sy-9,3,3); }
+      else if(f==='right'){ ctx.fillRect(sx+8,sy-8,3,3); ctx.fillRect(sx+2,sy-9,3,3); }
+      else { ctx.fillRect(sx-8,sy-9,3,3); ctx.fillRect(sx+5,sy-9,3,3); }
     } else if(e.kind==='dragon'){
       const f = e.facing || 'down';
       const pal = e.element==='frost'
@@ -2230,14 +2266,14 @@
     for(const e of state.enemies){
       const dx=state.player.x-e.x, dy=state.player.y-e.y, d=Math.hypot(dx,dy)||1;
       const minAdj = 1.05;
-      const moveSpeed = (e.kind==='titan') ? 0.42 : ((e.kind==='brute'||e.kind==='ogre') ? 0.82 : (e.kind==='dragon' ? 1.05 : 1.6));
+      const moveSpeed = (e.kind==='titan') ? 0.33 : ((e.kind==='brute'||e.kind==='ogre') ? 0.82 : (e.kind==='dragon' ? 1.05 : 1.6));
       if(Math.abs(dx) > Math.abs(dy)) e.facing = dx>0 ? 'right' : 'left';
       else e.facing = dy>0 ? 'down' : 'up';
       if(d<9 && d>minAdj){
         e.x+=(dx/d)*dt*moveSpeed;
         e.y+=(dy/d)*dt*moveSpeed;
       }
-      const atkRange = (e.kind==='dragon') ? 1.18 : (e.kind==='titan' ? 1.9 : ((e.kind==='brute'||e.kind==='ogre') ? 1.4 : 1.25));
+      const atkRange = (e.kind==='dragon') ? 1.18 : (e.kind==='titan' ? 2.25 : ((e.kind==='brute'||e.kind==='ogre') ? 1.4 : 1.25));
       if(e.kind==='dragon' && d<=6.4 && d>1.35){
         e.projCd = Number(e.projCd||0) - dt;
         if(e.projCd <= 0){
