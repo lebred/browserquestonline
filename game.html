@@ -517,9 +517,6 @@
     portalCast:{active:false,startedAt:0,endAt:0},
     sessionConflict:false,
     forceSessionClaimOnce:false,
-    instanceSyncBusy:false,
-    instanceNextSyncAt:0,
-    instanceDirty:false,
     audioOn:false,audioCtx:null,audioTimer:null,audioThemeKey:'',
     lang:(localStorage.getItem('orson_lang_v1')||'en')==='fr'?'fr':'en',
   };
@@ -1143,9 +1140,6 @@
   function spawnEnemies(){
     state.enemies=[];
     state.enemyRespawnTick = 0;
-    if(state.zone === 'dungeon'){
-      return;
-    }
     const count=desiredEnemyCount();
     for(let i=0;i<count;i++) trySpawnOneEnemy(i);
   }
@@ -1190,8 +1184,6 @@
     if(zone==='village'){
       state.player.x=41;
       state.player.y=42;
-      state.instanceDirty = false;
-      state.instanceNextSyncAt = 0;
     } else {
       const up = findTile(state.map, 8);
       const down = findTile(state.map, 9);
@@ -1202,11 +1194,6 @@
       state.metrics.max_floor=Math.max(Number(state.metrics.max_floor||0),Number(floor||0));
     }
     spawnEnemies(); spawnNPCs();
-    if(zone==='dungeon'){
-      state.instanceNextSyncAt = 0;
-      state.instanceDirty = true;
-      setTimeout(()=>{ syncInstanceState(true); }, 20);
-    }
     playTransitionStinger(prevZone, prevFloor, state.zone, Number(state.floor||0));
     refreshMusicTheme();
     document.getElementById('zoneName').textContent = zone==='village'?tr('zoneVillage'):`${tr('zoneDungeon')} ${floor}`;
@@ -1696,10 +1683,6 @@
       }
     }
     state.enemies=state.enemies.filter(e=>Number.isFinite(e.hp)&&e.hp>0);
-    if(hits>0 && state.zone==='dungeon'){
-      state.instanceDirty = true;
-      state.instanceNextSyncAt = 0;
-    }
     if(hits>0) log(`⚔️ ${hits} ${tr('hitMsg')}`);
   }
 
@@ -2013,7 +1996,6 @@
     const chatFocused = (document.activeElement && (document.activeElement.id === 'chatInput'));
     if(!chatFocused || !panel.querySelector('#chatList')){
       panes.chat.innerHTML = `
-        <div class="k"><span id="chatOnlineLabel">${tr('onlineInZone')}</span>: <span id="chatOnlineValue">${Math.max(1, Number(state.onlineTotal||1))}</span></div>
         <div id="chatList" style="max-height:min(42vh,260px);overflow:auto;border:1px solid rgba(120,160,220,.22);border-radius:8px;padding:6px;margin:6px 0;background:rgba(12,20,35,.45)">
           <div class="k">${tr('noMessages')}</div>
         </div>
@@ -2022,21 +2004,22 @@
           <button id="chatSendBtn" class="btn primary" type="button">${tr('send')}</button>
         </div>
       `;
+      state.chatRenderStamp = '';
     }
     const chatListEl = panel.querySelector('#chatList');
-    const chatOnlineEl = panel.querySelector('#chatOnlineValue');
-    const chatOnlineLabel = panel.querySelector('#chatOnlineLabel');
-    if(chatOnlineLabel) chatOnlineLabel.textContent = tr('onlineInZone');
-    if(chatOnlineEl) chatOnlineEl.textContent = String(Math.max(1, Number(state.onlineTotal||1)));
     if(chatListEl){
       const nearBottom = (chatListEl.scrollHeight - chatListEl.scrollTop - chatListEl.clientHeight) < 28;
-      chatListEl.innerHTML = state.chatMessages.length
-        ? state.chatMessages.map(m => `<div><b>${String(m.display_name||'Player')}</b>: ${String(m.message||'')}</div>`).join('')
-        : `<div class="k">${tr('noMessages')}</div>`;
-      const forceBottom = state.activeTab === 'chat' && panel.classList.contains('open');
-      if(forceBottom || state.chatStick || nearBottom){
-        state.chatStick = true;
-        requestAnimationFrame(()=>{ chatListEl.scrollTop = chatListEl.scrollHeight; });
+      const lastMsg = state.chatMessages.length ? state.chatMessages[state.chatMessages.length-1] : null;
+      const chatStamp = `${state.lang}|${state.chatMessages.length}|${String(lastMsg?.created_at||lastMsg?.ts||lastMsg?.id||'')}`;
+      if(state.chatRenderStamp !== chatStamp){
+        chatListEl.innerHTML = state.chatMessages.length
+          ? state.chatMessages.map(m => `<div><b>${String(m.display_name||'Player')}</b>: ${String(m.message||'')}</div>`).join('')
+          : `<div class="k">${tr('noMessages')}</div>`;
+        state.chatRenderStamp = chatStamp;
+        if(state.chatStick || nearBottom){
+          state.chatStick = true;
+          requestAnimationFrame(()=>{ chatListEl.scrollTop = chatListEl.scrollHeight; });
+        }
       }
     }
   }
@@ -2059,6 +2042,8 @@
         ? dailyRows.map((it,idx)=>`<div>${idx+1}. <b>${String(it.display_name||'Player')}</b> <span class="k">${Number(it.kills||0)} ${tr('killsToday')}</span></div>`).join('')
         : `<div class="k">${tr('noMessages')}</div>`;
       panes.rank.innerHTML = `
+        <div class="k" style="margin-bottom:6px">${tr('onlineInZone')}: <b>${Math.max(1, Number(state.onlineTotal||1))}</b></div>
+        <hr style="border-color:rgba(140,180,230,.25);margin:8px 0">
         <div class="k" style="margin-bottom:6px">${tr('globalLeaderboard')}</div>
         <div>${globalHtml}</div>
         <hr style="border-color:rgba(140,180,230,.25);margin:8px 0">
@@ -2165,86 +2150,6 @@
       }
       state.peers = next;
     } catch {}
-  }
-
-  function _instanceEnemyPayload(e){
-    return {
-      id: String(e?.id || ''),
-      x: Number(e?.x || 0),
-      y: Number(e?.y || 0),
-      hp: Math.max(0, Number(e?.hp || 0)),
-      facing: String(e?.facing || 'down'),
-    };
-  }
-
-  function _applyInstanceEnemies(items){
-    if(!Array.isArray(items)) return;
-    const prev = {};
-    for(const e of state.enemies){
-      if(e && e.id) prev[String(e.id)] = e;
-    }
-    const next = [];
-    for(const raw of items.slice(0, 240)){
-      if(!raw || typeof raw !== 'object') continue;
-      const id = String(raw.id || '').trim();
-      if(!id) continue;
-      const p = prev[id];
-      const hp = Math.max(0, Number(raw.hp || 0));
-      const hpMax = Math.max(1, Number(raw.hpMax || hp || 1));
-      if(hp <= 0) continue;
-      next.push({
-        id,
-        x: Number(raw.x || 0),
-        y: Number(raw.y || 0),
-        hp,
-        hpMax,
-        atk: Math.max(1, Number(raw.atk || 1)),
-        xp: Math.max(1, Number(raw.xp || 1)),
-        gold: Math.max(0, Number(raw.gold || 0)),
-        kind: String(raw.kind || 'slime'),
-        element: String(raw.element || ''),
-        cd: Number(p?.cd || 0),
-        projCd: Number(p?.projCd || 0),
-        hitFx: Number(p?.hitFx || 0),
-        atkFx: Number(p?.atkFx || 0),
-        atkDir: Number(p?.atkDir || 0),
-        facing: String(raw.facing || p?.facing || 'down'),
-      });
-    }
-    state.enemies = next;
-  }
-
-  async function syncInstanceState(force=false){
-    if(state.sessionConflict) return;
-    if(state.zone !== 'dungeon' || Number(state.floor||0) <= 0) return;
-    const now = Date.now();
-    if(state.instanceSyncBusy) return;
-    if(!force && now < Number(state.instanceNextSyncAt||0)) return;
-    state.instanceSyncBusy = true;
-    try{
-      const payload = {
-        guest_id: state.auth.logged ? '' : guestId,
-        zone: state.zone,
-        floor: Number(state.floor||0),
-        enemies: state.enemies.map(_instanceEnemyPayload),
-      };
-      const r = await fetch('/api/game/instance/sync', {
-        method:'POST',
-        credentials:'include',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(payload),
-      });
-      const d = await r.json().catch(()=>({}));
-      if(d?.ok && Array.isArray(d.enemies)){
-        _applyInstanceEnemies(d.enemies);
-      }
-      state.instanceDirty = false;
-      state.instanceNextSyncAt = Date.now() + (force ? 300 : 1100);
-    } catch {
-      state.instanceNextSyncAt = Date.now() + 1400;
-    } finally {
-      state.instanceSyncBusy = false;
-    }
   }
 
   async function refreshChat(){
@@ -2996,7 +2901,7 @@
     acc+=dt; rankAcc+=dt; mmoAcc+=dt; chatAcc+=dt; uiAcc+=dt;
     if(acc>4){ save(); acc=0; }
     if(rankAcc>15){ refreshLeaderboard(); rankAcc=0; }
-    if(mmoAcc>1.2){ updatePresence(); refreshPresence(); syncInstanceState(false); mmoAcc=0; }
+    if(mmoAcc>1.2){ updatePresence(); refreshPresence(); mmoAcc=0; }
     if(chatAcc>3.0){ refreshChat(); chatAcc=0; }
     if(uiAcc>0.45){ renderPanels(); uiAcc=0; }
     requestAnimationFrame(loop);
