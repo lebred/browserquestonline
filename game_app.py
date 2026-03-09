@@ -8,6 +8,8 @@ import re
 import secrets
 import sqlite3
 import hmac
+import random
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from hashlib import sha256
@@ -247,6 +249,17 @@ def _sec_db() -> sqlite3.Connection:
     )
     cur.execute(
         '''
+        CREATE TABLE IF NOT EXISTS game_floor_instances (
+            instance_key TEXT PRIMARY KEY,
+            zone TEXT NOT NULL DEFAULT 'village',
+            floor INTEGER NOT NULL DEFAULT 0,
+            state_json TEXT NOT NULL DEFAULT '{}',
+            updated_at TEXT NOT NULL
+        )
+        '''
+    )
+    cur.execute(
+        '''
         CREATE TABLE IF NOT EXISTS game_guest_ip_daily (
             day_key TEXT NOT NULL,
             ip TEXT NOT NULL,
@@ -263,6 +276,7 @@ def _sec_db() -> sqlite3.Connection:
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_active_sessions_updated ON game_active_sessions(updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_daily_kills_day ON game_daily_kills(day_key, kills DESC, updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_guest_ip_daily_day_ip ON game_guest_ip_daily(day_key, ip, updated_at DESC)')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_game_floor_instances_zone_floor ON game_floor_instances(zone, floor, updated_at DESC)')
     con.commit()
     _SEC_DB_SCHEMA_READY = True
     return con
@@ -372,6 +386,228 @@ def _game_touch_active_session(cur: sqlite3.Cursor, user_key: str, client_sessio
         (user_key, client_session, now_iso),
     )
     return True
+
+
+def _instance_key(zone: str, floor: int) -> str:
+    z = str(zone or 'village').strip().lower()[:40]
+    f = max(0, min(int(floor or 0), 999))
+    return f'{z}:{f}'
+
+
+def _floor_tier(floor: int) -> int:
+    f = max(1, int(floor or 1))
+    return max(0, (f - 1) // 5)
+
+
+def _instance_target_count(zone: str, floor: int) -> int:
+    if str(zone) != 'dungeon':
+        return 0
+    t = _floor_tier(floor)
+    return min(14 + int(floor) * 2 + (t * 3), 44)
+
+
+def _instance_map_size(floor: int) -> tuple[int, int]:
+    f = max(1, int(floor or 1))
+    base = 62
+    if f >= 11:
+        base = int(round(62 + min(44, (f - 1) * 2.2)))
+    return (base, base)
+
+
+def _instance_enemy(rng: random.Random, floor: int, idx: int, w: int, h: int) -> dict:
+    tier = _floor_tier(floor)
+    spike = 1.0 + tier * 0.55
+    base = int((18 + floor * 5) * spike)
+    kind = 'slime'
+    hp = base
+    atk = int((3 + floor) * (1 + tier * 0.4))
+    xp = int((8 + floor * 2) * (1 + tier * 0.3))
+    gold = int((2 + rng.randrange(0, 5 + floor)) * (1 + tier * 0.22))
+
+    mini_boss_chance = 0.08 + tier * 0.04 + (0.12 if (floor % 5) == 0 else 0.0)
+    if rng.random() < mini_boss_chance:
+        if floor >= 12 and rng.random() < 0.05:
+            kind = 'titan'
+            hp = int(base * 12.6)
+            atk += 20 + int(floor * 1.15)
+            xp = int(xp * 7.8)
+            gold += 95 + rng.randrange(0, 120)
+        elif tier >= 2 and rng.random() < 0.5:
+            kind = 'dragon'
+            hp = int(base * 4.6)
+            atk += 7 + int(floor / 2)
+            xp = int(xp * 3.1)
+            gold += 24 + rng.randrange(0, 30)
+        else:
+            kind = 'ogre'
+            hp = int(base * 3.5)
+            atk += 5 + int(floor / 3)
+            xp = int(xp * 2.5)
+            gold += 14 + rng.randrange(0, 18)
+    elif rng.random() < 0.12:
+        kind = 'brute'
+        hp = int(base * 2.5)
+        atk += 2 + int(floor / 2)
+        xp = int(xp * 2.0)
+        gold += 8 + rng.randrange(0, 12)
+
+    element = ''
+    if kind == 'dragon':
+        variants = ['fire', 'frost', 'shadow']
+        element = variants[max(0, int(floor)) % len(variants)]
+
+    ex = 6 + rng.randrange(0, max(8, w - 12))
+    ey = 6 + rng.randrange(0, max(8, h - 12))
+    eid = f'dng:{int(floor)}:m{int(idx)}'
+    return {
+        'id': eid,
+        'x': float(ex) + 0.5,
+        'y': float(ey) + 0.5,
+        'hp': int(max(1, hp)),
+        'hpMax': int(max(1, hp)),
+        'atk': int(max(1, atk)),
+        'xp': int(max(1, xp)),
+        'gold': int(max(0, gold)),
+        'kind': str(kind),
+        'element': str(element),
+        'facing': 'down',
+    }
+
+
+def _instance_default_state(zone: str, floor: int) -> dict:
+    z = str(zone or 'village').strip().lower()
+    fl = max(0, min(int(floor or 0), 999))
+    if z != 'dungeon' or fl <= 0:
+        return {'zone': z, 'floor': fl, 'enemies': [], 'next_respawn_ts': float(time.time() + 6.0)}
+
+    w, h = _instance_map_size(fl)
+    seed_src = f'{z}:{fl}:seed-v1'.encode('utf-8')
+    seed = int.from_bytes(sha256(seed_src).digest()[:8], 'big', signed=False)
+    rng = random.Random(seed)
+    count = _instance_target_count(z, fl)
+    enemies = [_instance_enemy(rng, fl, i, w, h) for i in range(count)]
+    return {'zone': z, 'floor': fl, 'enemies': enemies, 'next_respawn_ts': float(time.time() + 4.0)}
+
+
+def _instance_load(cur: sqlite3.Cursor, zone: str, floor: int) -> dict:
+    z = str(zone or 'village').strip().lower()[:40]
+    fl = max(0, min(int(floor or 0), 999))
+    key = _instance_key(z, fl)
+    cur.execute('SELECT state_json FROM game_floor_instances WHERE instance_key=? LIMIT 1', (key,))
+    row = cur.fetchone()
+    if not row:
+        state = _instance_default_state(z, fl)
+        now_iso = datetime.now(timezone.utc).isoformat()
+        cur.execute(
+            '''
+            INSERT INTO game_floor_instances(instance_key, zone, floor, state_json, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(instance_key) DO UPDATE SET
+                zone=excluded.zone,
+                floor=excluded.floor,
+                state_json=excluded.state_json,
+                updated_at=excluded.updated_at
+            ''',
+            (key, z, fl, json.dumps(state, ensure_ascii=False)[:1200000], now_iso),
+        )
+        return state
+    try:
+        state = json.loads(str(row['state_json'] or '{}'))
+        if not isinstance(state, dict):
+            raise ValueError('bad state')
+    except Exception:
+        state = _instance_default_state(z, fl)
+    state['zone'] = z
+    state['floor'] = fl
+    if not isinstance(state.get('enemies'), list):
+        state['enemies'] = []
+    return state
+
+
+def _instance_save(cur: sqlite3.Cursor, zone: str, floor: int, state: dict) -> None:
+    z = str(zone or 'village').strip().lower()[:40]
+    fl = max(0, min(int(floor or 0), 999))
+    key = _instance_key(z, fl)
+    now_iso = datetime.now(timezone.utc).isoformat()
+    cur.execute(
+        '''
+        INSERT INTO game_floor_instances(instance_key, zone, floor, state_json, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(instance_key) DO UPDATE SET
+            zone=excluded.zone,
+            floor=excluded.floor,
+            state_json=excluded.state_json,
+            updated_at=excluded.updated_at
+        ''',
+        (key, z, fl, json.dumps(state, ensure_ascii=False)[:1200000], now_iso),
+    )
+
+
+def _instance_clean_and_respawn(state: dict) -> dict:
+    z = str(state.get('zone') or 'village').strip().lower()[:40]
+    fl = max(0, min(int(state.get('floor') or 0), 999))
+    enemies_raw = state.get('enemies') if isinstance(state.get('enemies'), list) else []
+    enemies: list[dict] = []
+    by_id: set[str] = set()
+    for e in enemies_raw[:240]:
+        if not isinstance(e, dict):
+            continue
+        eid = str(e.get('id') or '').strip()[:120]
+        if not eid or eid in by_id:
+            continue
+        by_id.add(eid)
+        try:
+            hp_max = max(1, int(e.get('hpMax') or e.get('hp') or 1))
+            hp = max(0, min(hp_max, int(e.get('hp') or hp_max)))
+            if hp <= 0:
+                continue
+            enemies.append(
+                {
+                    'id': eid,
+                    'x': float(e.get('x') or 0.0),
+                    'y': float(e.get('y') or 0.0),
+                    'hp': hp,
+                    'hpMax': hp_max,
+                    'atk': max(1, int(e.get('atk') or 1)),
+                    'xp': max(1, int(e.get('xp') or 1)),
+                    'gold': max(0, int(e.get('gold') or 0)),
+                    'kind': str(e.get('kind') or 'slime')[:20],
+                    'element': str(e.get('element') or '')[:20],
+                    'facing': str(e.get('facing') or 'down')[:10],
+                }
+            )
+        except Exception:
+            continue
+    state['enemies'] = enemies
+
+    if z != 'dungeon' or fl <= 0:
+        state['next_respawn_ts'] = float(time.time() + 6.0)
+        return state
+
+    target = _instance_target_count(z, fl)
+    now_ts = float(time.time())
+    next_respawn_ts = float(state.get('next_respawn_ts') or 0.0)
+    if len(enemies) < target and now_ts >= next_respawn_ts:
+        w, h = _instance_map_size(fl)
+        rid = secrets.token_hex(4)
+        rng = random.Random(int.from_bytes(sha256(f'{z}:{fl}:{rid}'.encode('utf-8')).digest()[:8], 'big', signed=False))
+        new_enemy = _instance_enemy(rng, fl, len(enemies) + 1, w, h)
+        new_enemy['id'] = f'dng:{fl}:r{rid}'
+        enemies.append(new_enemy)
+        density = len(enemies) / max(1, target)
+        interval = 8.5
+        if density < 0.55:
+            interval = 3.4
+        if density < 0.35:
+            interval = 2.1
+        if density < 0.20:
+            interval = 1.2
+        state['next_respawn_ts'] = float(now_ts + interval)
+    else:
+        state['next_respawn_ts'] = float(max(now_ts + 0.6, next_respawn_ts or (now_ts + 2.0)))
+
+    state['enemies'] = enemies[:240]
+    return state
 
 
 @app.get('/healthz')
@@ -774,6 +1010,59 @@ def game_presence_list(request: Request, guest_id: str = '', zone: str = 'villag
     rows = [dict(r) for r in cur.fetchall()]
     con.commit(); con.close()
     return {'ok': True, 'items': rows, 'total_online': total_online}
+
+
+@app.post('/api/game/instance/sync')
+def game_instance_sync(request: Request, payload: dict = Body(...)):
+    guest_id = str(payload.get('guest_id') or '')
+    user_key, _display_name, _logged = _game_identity(request, guest_id=guest_id)
+    z = str(payload.get('zone') or 'village').strip().lower()[:40]
+    fl = max(0, min(int(payload.get('floor') or 0), 999))
+    incoming = payload.get('enemies') if isinstance(payload.get('enemies'), list) else []
+
+    con = _sec_db()
+    cur = con.cursor()
+    _enforce_guest_identity_quota(request, cur, user_key)
+    state = _instance_load(cur, z, fl)
+    current = state.get('enemies') if isinstance(state.get('enemies'), list) else []
+    cur_by_id: dict[str, dict] = {}
+    for e in current:
+        if isinstance(e, dict):
+            eid = str(e.get('id') or '').strip()
+            if eid:
+                cur_by_id[eid] = e
+
+    for raw in incoming[:240]:
+        if not isinstance(raw, dict):
+            continue
+        eid = str(raw.get('id') or '').strip()[:120]
+        if not eid:
+            continue
+        e = cur_by_id.get(eid)
+        if not e:
+            continue
+        try:
+            in_hp = int(raw.get('hp') or e.get('hp') or 0)
+            hp_max = max(1, int(e.get('hpMax') or 1))
+            e['hp'] = max(0, min(hp_max, min(int(e.get('hp') or hp_max), in_hp)))
+            e['x'] = float(raw.get('x') or e.get('x') or 0.0)
+            e['y'] = float(raw.get('y') or e.get('y') or 0.0)
+            e['facing'] = str(raw.get('facing') or e.get('facing') or 'down')[:10]
+        except Exception:
+            continue
+
+    state['enemies'] = list(cur_by_id.values())
+    state = _instance_clean_and_respawn(state)
+    _instance_save(cur, z, fl, state)
+    con.commit()
+    con.close()
+    return {
+        'ok': True,
+        'zone': z,
+        'floor': fl,
+        'enemies': state.get('enemies', []),
+        'server_ts': int(time.time() * 1000),
+    }
 
 
 @app.post('/api/game/chat/send')

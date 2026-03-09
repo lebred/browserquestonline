@@ -164,7 +164,7 @@
   </div>
 
   <div class="action-wrap">
-    <button class="action-btn small" id="potionBtn" style="border-color:#a34a4a;background:rgba(110,26,26,.92);color:#ffd5d5">🧪</button>
+    <button class="action-btn small" id="potionBtn" style="border-color:#4f6ca1;background:rgba(24,42,78,.88);color:#cbe0ff">🧪</button>
     <div class="hint" id="actionHint">Action: Attaquer</div>
     <button class="action-btn" id="actionBtn">ATK</button>
   </div>
@@ -517,6 +517,9 @@
     portalCast:{active:false,startedAt:0,endAt:0},
     sessionConflict:false,
     forceSessionClaimOnce:false,
+    instanceSyncBusy:false,
+    instanceNextSyncAt:0,
+    instanceDirty:false,
     audioOn:false,audioCtx:null,audioTimer:null,audioThemeKey:'',
     lang:(localStorage.getItem('orson_lang_v1')||'en')==='fr'?'fr':'en',
   };
@@ -1140,6 +1143,9 @@
   function spawnEnemies(){
     state.enemies=[];
     state.enemyRespawnTick = 0;
+    if(state.zone === 'dungeon'){
+      return;
+    }
     const count=desiredEnemyCount();
     for(let i=0;i<count;i++) trySpawnOneEnemy(i);
   }
@@ -1184,6 +1190,8 @@
     if(zone==='village'){
       state.player.x=41;
       state.player.y=42;
+      state.instanceDirty = false;
+      state.instanceNextSyncAt = 0;
     } else {
       const up = findTile(state.map, 8);
       const down = findTile(state.map, 9);
@@ -1194,6 +1202,11 @@
       state.metrics.max_floor=Math.max(Number(state.metrics.max_floor||0),Number(floor||0));
     }
     spawnEnemies(); spawnNPCs();
+    if(zone==='dungeon'){
+      state.instanceNextSyncAt = 0;
+      state.instanceDirty = true;
+      setTimeout(()=>{ syncInstanceState(true); }, 20);
+    }
     playTransitionStinger(prevZone, prevFloor, state.zone, Number(state.floor||0));
     refreshMusicTheme();
     document.getElementById('zoneName').textContent = zone==='village'?tr('zoneVillage'):`${tr('zoneDungeon')} ${floor}`;
@@ -1683,6 +1696,10 @@
       }
     }
     state.enemies=state.enemies.filter(e=>Number.isFinite(e.hp)&&e.hp>0);
+    if(hits>0 && state.zone==='dungeon'){
+      state.instanceDirty = true;
+      state.instanceNextSyncAt = 0;
+    }
     if(hits>0) log(`⚔️ ${hits} ${tr('hitMsg')}`);
   }
 
@@ -2150,6 +2167,86 @@
     } catch {}
   }
 
+  function _instanceEnemyPayload(e){
+    return {
+      id: String(e?.id || ''),
+      x: Number(e?.x || 0),
+      y: Number(e?.y || 0),
+      hp: Math.max(0, Number(e?.hp || 0)),
+      facing: String(e?.facing || 'down'),
+    };
+  }
+
+  function _applyInstanceEnemies(items){
+    if(!Array.isArray(items)) return;
+    const prev = {};
+    for(const e of state.enemies){
+      if(e && e.id) prev[String(e.id)] = e;
+    }
+    const next = [];
+    for(const raw of items.slice(0, 240)){
+      if(!raw || typeof raw !== 'object') continue;
+      const id = String(raw.id || '').trim();
+      if(!id) continue;
+      const p = prev[id];
+      const hp = Math.max(0, Number(raw.hp || 0));
+      const hpMax = Math.max(1, Number(raw.hpMax || hp || 1));
+      if(hp <= 0) continue;
+      next.push({
+        id,
+        x: Number(raw.x || 0),
+        y: Number(raw.y || 0),
+        hp,
+        hpMax,
+        atk: Math.max(1, Number(raw.atk || 1)),
+        xp: Math.max(1, Number(raw.xp || 1)),
+        gold: Math.max(0, Number(raw.gold || 0)),
+        kind: String(raw.kind || 'slime'),
+        element: String(raw.element || ''),
+        cd: Number(p?.cd || 0),
+        projCd: Number(p?.projCd || 0),
+        hitFx: Number(p?.hitFx || 0),
+        atkFx: Number(p?.atkFx || 0),
+        atkDir: Number(p?.atkDir || 0),
+        facing: String(raw.facing || p?.facing || 'down'),
+      });
+    }
+    state.enemies = next;
+  }
+
+  async function syncInstanceState(force=false){
+    if(state.sessionConflict) return;
+    if(state.zone !== 'dungeon' || Number(state.floor||0) <= 0) return;
+    const now = Date.now();
+    if(state.instanceSyncBusy) return;
+    if(!force && now < Number(state.instanceNextSyncAt||0)) return;
+    state.instanceSyncBusy = true;
+    try{
+      const payload = {
+        guest_id: state.auth.logged ? '' : guestId,
+        zone: state.zone,
+        floor: Number(state.floor||0),
+        enemies: state.enemies.map(_instanceEnemyPayload),
+      };
+      const r = await fetch('/api/game/instance/sync', {
+        method:'POST',
+        credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+      const d = await r.json().catch(()=>({}));
+      if(d?.ok && Array.isArray(d.enemies)){
+        _applyInstanceEnemies(d.enemies);
+      }
+      state.instanceDirty = false;
+      state.instanceNextSyncAt = Date.now() + (force ? 300 : 1100);
+    } catch {
+      state.instanceNextSyncAt = Date.now() + 1400;
+    } finally {
+      state.instanceSyncBusy = false;
+    }
+  }
+
   async function refreshChat(){
     try{
       const r = await fetch('/api/game/chat/list?limit=80', {credentials:'include'});
@@ -2385,7 +2482,9 @@
       }
       state.enemies=state.enemies.filter(e=>Number.isFinite(e.hp)&&e.hp>0);
     }
-    maybeRespawnEnemies(dt);
+    if(state.zone !== 'dungeon'){
+      maybeRespawnEnemies(dt);
+    }
 
     for(const p of state.enemyProjectiles){
       p.px = Number(p.x||0);
@@ -2897,7 +2996,7 @@
     acc+=dt; rankAcc+=dt; mmoAcc+=dt; chatAcc+=dt; uiAcc+=dt;
     if(acc>4){ save(); acc=0; }
     if(rankAcc>15){ refreshLeaderboard(); rankAcc=0; }
-    if(mmoAcc>1.8){ updatePresence(); refreshPresence(); mmoAcc=0; }
+    if(mmoAcc>1.2){ updatePresence(); refreshPresence(); syncInstanceState(false); mmoAcc=0; }
     if(chatAcc>3.0){ refreshChat(); chatAcc=0; }
     if(uiAcc>0.45){ renderPanels(); uiAcc=0; }
     requestAnimationFrame(loop);
