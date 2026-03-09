@@ -681,7 +681,8 @@ def game_save_set(request: Request, payload: dict = Body(...)):
             return (0, 0, 0)
         p = obj.get('player') if isinstance(obj.get('player'), dict) else {}
         m = obj.get('metrics') if isinstance(obj.get('metrics'), dict) else {}
-        return (int(p.get('lvl') or 1), int(m.get('max_floor') or 0), int(p.get('gold') or 0))
+        # Gold can legitimately go down (buying gear/potions), so it must not block a newer save.
+        return (int(p.get('lvl') or 1), int(m.get('max_floor') or 0), int(m.get('kills') or 0))
 
     con = _sec_db()
     cur = con.cursor()

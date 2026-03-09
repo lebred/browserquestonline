@@ -2010,8 +2010,7 @@
       return `<div class="item"><div><div><b>${itemLocalizedName(n)}</b>${rarityChip}</div><div class="k">${stat} · ${cost} ${tr('gold')}</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`;
     }).join('');
     panes.shop.innerHTML=`${stockHtml}<div class="k">${tr('merchantHint')}</div>`;
-    const chatFocused = (document.activeElement && (document.activeElement.id === 'chatInput'));
-    if(!chatFocused || !panel.querySelector('#chatList')){
+    if(!panel.querySelector('#chatList')){
       panes.chat.innerHTML = `
         <div id="chatList" style="flex:1;min-height:0;overflow:auto;border:1px solid rgba(120,160,220,.22);border-radius:8px;padding:6px;background:rgba(12,20,35,.45)">
           <div class="k">${tr('noMessages')}</div>
