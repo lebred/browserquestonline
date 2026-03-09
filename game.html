@@ -164,7 +164,7 @@
   </div>
 
   <div class="action-wrap">
-    <button class="action-btn small" id="potionBtn" style="border-color:#4f6ca1;background:rgba(24,42,78,.88);color:#cbe0ff">🧪</button>
+    <button class="action-btn small" id="potionBtn" style="border-color:#a34a4a;background:rgba(110,26,26,.92);color:#ffd5d5">🧪</button>
     <div class="hint" id="actionHint">Action: Attaquer</div>
     <button class="action-btn" id="actionBtn">ATK</button>
   </div>
@@ -508,6 +508,7 @@
     enemies:[],enemyProjectiles:[],npcs:[],clickTarget:null,keys:{w:false,a:false,s:false,d:false},particles:[],lootTexts:[],logs:[],
     enemyRespawnTick:0,
     lavaTick:0,
+    lavaFlash:0,
     chatStick:true,
     metrics:{rat_kills:0,max_floor:0,potions_found:0,kills:0},quests:[],questsDone:0,
     ctxAction:{type:'attack',target:null,label:'ATK',hint:'Action: Attaquer'},
@@ -1270,10 +1271,20 @@
       ctx.fillRect(sx+Math.floor(ts*.08),sy+Math.floor(ts*.48),Math.floor(ts*.84),Math.floor(ts*.04));
     }
     else if(t===11){
-      ctx.fillStyle='#3b1812'; ctx.fillRect(sx,sy,ts,ts);
-      ctx.fillStyle='rgba(255,92,42,.68)'; ctx.fillRect(sx+1,sy+1,ts-2,ts-2);
-      ctx.fillStyle='rgba(255,180,70,.45)'; ctx.fillRect(sx+Math.floor(ts*.2),sy+Math.floor(ts*.25),Math.floor(ts*.6),Math.floor(ts*.2));
-      ctx.fillStyle='rgba(255,70,35,.45)'; ctx.fillRect(sx+Math.floor(ts*.15),sy+Math.floor(ts*.58),Math.floor(ts*.7),Math.floor(ts*.2));
+      const tm = performance.now() * 0.006;
+      const pulse = 0.5 + 0.5 * Math.sin(tm + sx*0.08 + sy*0.06);
+      const pulse2 = 0.5 + 0.5 * Math.sin(tm*1.35 + sx*0.11 - sy*0.04);
+      ctx.fillStyle='#35130f'; ctx.fillRect(sx,sy,ts,ts);
+      ctx.fillStyle=`rgba(255,${Math.floor(70 + pulse*55)},${Math.floor(20 + pulse2*25)},${(0.52 + pulse*0.28).toFixed(3)})`;
+      ctx.fillRect(sx+1,sy+1,ts-2,ts-2);
+      ctx.fillStyle=`rgba(255,${Math.floor(160 + pulse*60)},${Math.floor(35 + pulse*35)},${(0.34 + pulse2*0.26).toFixed(3)})`;
+      ctx.fillRect(sx+Math.floor(ts*.14),sy+Math.floor(ts*(0.20 + pulse*0.05)),Math.floor(ts*.72),Math.floor(ts*.18));
+      ctx.fillStyle=`rgba(255,${Math.floor(95 + pulse2*40)},${Math.floor(20 + pulse*20)},${(0.28 + pulse*0.2).toFixed(3)})`;
+      ctx.fillRect(sx+Math.floor(ts*.10),sy+Math.floor(ts*(0.56 + pulse2*0.04)),Math.floor(ts*.78),Math.floor(ts*.2));
+      if(pulse > 0.72){
+        ctx.fillStyle='rgba(255,225,120,.30)';
+        ctx.fillRect(sx+Math.floor(ts*.44), sy+Math.floor(ts*.34), Math.max(1, Math.floor(ts*.12)), Math.max(1, Math.floor(ts*.12)));
+      }
     }
   }
 
@@ -2201,6 +2212,7 @@
         const burn = Math.max(2, Math.floor(Number(state.player.hpMax||100) * 0.03));
         state.player.hp -= burn;
         enemyDamagedPlayer = true;
+        state.lavaFlash = Math.max(Number(state.lavaFlash||0), 0.34);
         state.lavaTick = 0.75;
         log(`🔥 Lava -${burn}`);
       }
@@ -2378,6 +2390,7 @@
     state.particles=state.particles.filter(p=>p.t<p.life);
     for(const f of state.lootTexts) f.t += dt;
     state.lootTexts = state.lootTexts.filter(f=>Number(f.t||0) < Number(f.life||0));
+    state.lavaFlash = Math.max(0, Number(state.lavaFlash||0) - dt*1.9);
 
     if(state.player.hp<=0 && !state.dead){ applyDeathPenalty(); }
     if(state.portalCast.active && nowPerf >= Number(state.portalCast.endAt||0)) completeTownPortal();
@@ -2409,6 +2422,11 @@
     drawLootTexts();
 
     const g=ctx.createRadialGradient(W/2,H/2,80,W/2,H/2,Math.max(W,H)*0.75); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.28)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    if(Number(state.lavaFlash||0) > 0){
+      const a = clamp(Number(state.lavaFlash||0), 0, 0.35);
+      ctx.fillStyle = `rgba(255,56,34,${a.toFixed(3)})`;
+      ctx.fillRect(0,0,W,H);
+    }
 
     document.getElementById('playerName').textContent=state.auth.name;
     document.getElementById('lvl').textContent=String(state.player.lvl);
