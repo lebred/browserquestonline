@@ -36,6 +36,8 @@
     .tab.active{background:#274f99}
     .pane{display:none;min-height:0;overflow:auto;background:rgba(8,14,28,.36);border:1px solid rgba(120,160,220,.2);border-radius:10px;padding:8px;font-size:13px;line-height:1.4}
     .pane.active{display:block}
+    #pane-chat{overflow:hidden}
+    #pane-chat.active{display:flex;flex:1;flex-direction:column;gap:6px;min-height:0}
     .pane input,.pane textarea, .pane button{
       touch-action:auto;
     }
@@ -2011,7 +2013,7 @@
     const chatFocused = (document.activeElement && (document.activeElement.id === 'chatInput'));
     if(!chatFocused || !panel.querySelector('#chatList')){
       panes.chat.innerHTML = `
-        <div id="chatList" style="max-height:min(42vh,260px);overflow:auto;border:1px solid rgba(120,160,220,.22);border-radius:8px;padding:6px;margin:6px 0;background:rgba(12,20,35,.45)">
+        <div id="chatList" style="flex:1;min-height:0;overflow:auto;border:1px solid rgba(120,160,220,.22);border-radius:8px;padding:6px;background:rgba(12,20,35,.45)">
           <div class="k">${tr('noMessages')}</div>
         </div>
         <div style="display:flex;gap:6px">
