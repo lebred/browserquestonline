@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Orson Quest</title>
+  <title>BrowserQuest Online</title>
   <style>
     :root{--bg:#060b16;--text:#eef4ff;--muted:#9cb1d8;--line:rgba(120,160,220,.35);--glass:rgba(8,14,28,.38);--glass2:rgba(8,14,28,.62);--btn:#214f9e;--btn2:#182d54}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -50,9 +50,11 @@
     .dpad button,.action-btn{touch-action:none;user-select:none;-webkit-user-select:none}
     .dpad button{border:1px solid #4867a0;background:rgba(26,47,89,.62);color:#fff;border-radius:12px;font-size:19px;font-weight:900}
 
-    .action-wrap{position:absolute;right:8px;bottom:8px;display:flex;align-items:center;gap:8px;z-index:21}
+    .action-wrap{position:absolute;right:8px;bottom:8px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:21}
     .hint{background:var(--glass);padding:7px 9px;font-size:12px;color:#d4e4ff}
     .action-btn{width:74px;height:74px;border-radius:999px;border:1px solid #8d6f3d;background:rgba(83,57,22,.88);color:#ffde98;font-weight:900;font-size:13px}
+    .action-btn.small{width:52px;height:52px;font-size:16px}
+    .action-btn.is-disabled{opacity:.45;filter:grayscale(.4);cursor:not-allowed}
 
     .dialog{position:absolute;left:50%;transform:translateX(-50%);bottom:98px;z-index:25;max-width:min(700px,92vw);padding:9px 12px;border-radius:12px;background:rgba(5,10,20,.72);border:1px solid rgba(157,186,234,.45);display:none}
     .dialog.show{display:block}
@@ -117,7 +119,7 @@
   <canvas id="view"></canvas>
 
   <div class="top">
-    <div class="brand">⚔️ ORSON QUEST</div>
+    <div class="brand">⚔️ BROWSERQUEST ONLINE</div>
     <div class="actions">
       <button class="btn" id="panelBtn">🎒 Menu</button>
       <a class="btn" id="wikiBtn" href="/wiki">📘 Wiki</a>
@@ -162,6 +164,7 @@
   </div>
 
   <div class="action-wrap">
+    <button class="action-btn small" id="potionBtn" style="border-color:#4f6ca1;background:rgba(24,42,78,.88);color:#cbe0ff">🧪</button>
     <div class="hint" id="actionHint">Action: Attaquer</div>
     <button class="action-btn" id="actionBtn">ATK</button>
   </div>
@@ -173,7 +176,7 @@
   </div>
 
   <div class="chat-ticker" id="chatTicker">
-    <div class="line">💬 Bienvenue dans Orson Quest.</div>
+    <div class="line">💬 Bienvenue sur BrowserQuest Online.</div>
     <div class="line">💬 Le chat MMO apparaîtra ici.</div>
   </div>
 
@@ -219,6 +222,7 @@
   const chatTicker = document.getElementById('chatTicker');
   const levelFx = document.getElementById('levelFx');
   const audioBtn = document.getElementById('audioBtn');
+  const potionBtn = document.getElementById('potionBtn');
   const sessionConflictModal = document.getElementById('sessionConflictModal');
 
   const panes = {
@@ -246,7 +250,10 @@
     'Bouclier renforcé': {slot:'shield',atk:0,def:4,hp:16,value:78},
     'Bouclier runique': {slot:'shield',atk:0,def:7,hp:26,value:190},
     'Égide antique': {slot:'shield',atk:1,def:10,hp:36,value:340},
-    'Bottes légères': {slot:'armor',atk:0,def:1,hp:0,value:18},
+    'Bottes légères': {slot:'boots',atk:0,def:1,hp:0,ms:0.02,value:18},
+    'Bottes du pisteur': {slot:'boots',atk:0,def:2,hp:6,ms:0.04,value:80},
+    'Bottes runiques': {slot:'boots',atk:1,def:4,hp:12,ms:0.06,value:210},
+    'Bottes du néant': {slot:'boots',atk:2,def:7,hp:20,ms:0.09,value:420},
     'Tunique renforcée': {slot:'armor',atk:0,def:3,hp:12,value:60},
     'Armure du gardien': {slot:'armor',atk:0,def:8,hp:34,value:220},
     'Armure de dragon': {slot:'armor',atk:2,def:12,hp:52,value:390},
@@ -269,6 +276,9 @@
       'Bouclier runique':'Runic Shield',
       'Égide antique':'Ancient Aegis',
       'Bottes légères':'Light Boots',
+      'Bottes du pisteur':'Tracker Boots',
+      'Bottes runiques':'Runic Boots',
+      'Bottes du néant':'Void Boots',
       'Tunique renforcée':'Reinforced Tunic',
       'Armure du gardien':'Guardian Armor',
       'Armure de dragon':'Dragon Armor',
@@ -351,6 +361,7 @@
       atk: scale(base.atk, m.pow),
       def: scale(base.def, m.pow),
       hp: scale(base.hp, m.pow),
+      ms: Math.max(0, Math.round(Number(base.ms||0) * (1 + (m.pow-1)*0.35) * 1000) / 1000),
       heal: scale(base.heal, healMul),
       value: scale(base.value, m.val),
       color: m.color,
@@ -387,7 +398,7 @@
   }
   function itemScore(it){
     if(!it) return 0;
-    return Number(it.atk||0)*1.45 + Number(it.def||0)*1.2 + Number(it.hp||0)*0.18 + Number(it.heal||0)*0.22;
+    return Number(it.atk||0)*1.45 + Number(it.def||0)*1.2 + Number(it.hp||0)*0.18 + Number(it.heal||0)*0.22 + Number(it.ms||0)*180;
   }
   function rarityRank(r){
     const x = normalizeRarity(r);
@@ -429,7 +440,7 @@
   }
   function statLine(it){
     if(!it) return '';
-    return `ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}` + (it.heal?` · Heal ${it.heal}`:'');
+    return `ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}` + (it.ms?` · SPD +${Math.round(Number(it.ms||0)*100)}%`:'') + (it.heal?` · Heal ${it.heal}`:'');
   }
   function normalizeInventory(arr){
     if(!Array.isArray(arr)) return [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
@@ -450,7 +461,7 @@
     return out.length ? out : [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
   }
   function normalizeEquipped(eq){
-    const out = {weapon:null,shield:null,armor:null,ring:null};
+    const out = {weapon:null,shield:null,armor:null,boots:null,ring:null};
     const src = (eq && typeof eq==='object') ? eq : {};
     for(const slot of Object.keys(out)){
       const d = itemData(src[slot]);
@@ -471,10 +482,10 @@
     return 'common';
   }
   const SHOP_BY_TIER = [
-    ['Épée courte','Bouclier en bois','Tunique renforcée','Anneau d\'acier','Potion HP'],
-    ['Épée de garde','Bouclier renforcé','Tunique renforcée','Anneau d\'acier','Potion HP','Potion HP++'],
-    ['Lame runique','Bouclier runique','Armure du gardien','Anneau runique','Potion HP++'],
-    ['Épée draconique','Égide antique','Armure de dragon','Anneau du phénix','Potion HP++'],
+    ['Épée courte','Bouclier en bois','Bottes légères','Tunique renforcée','Anneau d\'acier','Potion HP'],
+    ['Épée de garde','Bouclier renforcé','Bottes du pisteur','Tunique renforcée','Anneau d\'acier','Potion HP','Potion HP++'],
+    ['Lame runique','Bouclier runique','Bottes runiques','Armure du gardien','Anneau runique','Potion HP++'],
+    ['Épée draconique','Égide antique','Bottes du néant','Armure de dragon','Anneau du phénix','Potion HP++'],
   ];
   const QUESTS = [
     {id:'q_rat_hunt',title:'Rat Hunter',metric:'rat_kills',target:5,reward:{gold:25,xp:20}},
@@ -487,14 +498,17 @@
     saveKey:`orson_rpg_save_guest_${guestId}`,
     zone:'village',floor:0,map:null,
     view:{w:24,h:14,tile:24,offX:0,offY:0,camX:0,camY:0},
-    player:{x:12,y:10,hp:100,hpMax:100,atkBase:8,defBase:2,atk:8,def:2,lvl:1,xp:0,xpNeed:40,gold:0,lastAtk:0,swingUntil:0,swingDir:0,facing:'down',attackAt:0},
-    equipped:{weapon:null,shield:null,armor:null,ring:null},
+    player:{x:12,y:10,hp:100,hpMax:100,atkBase:8,defBase:2,atk:8,def:2,moveSpeed:1,lvl:1,xp:0,xpNeed:40,gold:0,lastAtk:0,swingUntil:0,swingDir:0,facing:'down',attackAt:0},
+    equipped:{weapon:null,shield:null,armor:null,boots:null,ring:null},
     inv:[encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')],
     peers:[],
     onlineTotal:1,
+    activeTab:'gear',
     chatMessages:[],
     enemies:[],enemyProjectiles:[],npcs:[],clickTarget:null,keys:{w:false,a:false,s:false,d:false},particles:[],lootTexts:[],logs:[],
     enemyRespawnTick:0,
+    lavaTick:0,
+    chatStick:true,
     metrics:{rat_kills:0,max_floor:0,potions_found:0,kills:0},quests:[],questsDone:0,
     ctxAction:{type:'attack',target:null,label:'ATK',hint:'Action: Attaquer'},
     fullscreenTried:false,dead:false,levelFxUntil:0,lastVibeAt:0,
@@ -513,9 +527,9 @@
       player:'Player', zone:'Zone', level:'Level', gold:'Gold', hp:'HP', xp:'XP',
       needMerchant:'Only possible when you are near the merchant.',
       buy:'Buy', sell:'Sell', drop:'Drop', use:'Use',
-      equipped:'Equipped', weapon:'Weapon', shield:'Shield', armor:'Armor', ring:'Ring', none:'none',
+      equipped:'Equipped', weapon:'Weapon', shield:'Shield', armor:'Armor', boots:'Boots', ring:'Ring', none:'none',
       levelHint:'Recommended level',
-      chatWelcome1:'Welcome to Orson Quest.',
+      chatWelcome1:'Welcome to BrowserQuest Online.',
       chatWelcome2:'MMO chat feed appears here.',
       zoneVillage:'Village',
       zoneDungeon:'Dungeon',
@@ -580,9 +594,9 @@
       player:'Joueur', zone:'Zone', level:'Niveau', gold:'Or', hp:'HP', xp:'XP',
       needMerchant:'Possible seulement quand vous êtes près du marchand.',
       buy:'Acheter', sell:'Vendre', drop:'Jeter', use:'Utiliser',
-      equipped:'Équipement', weapon:'Arme', shield:'Bouclier', armor:'Armure', ring:'Anneau', none:'aucun',
+      equipped:'Équipement', weapon:'Arme', shield:'Bouclier', armor:'Armure', boots:'Bottes', ring:'Anneau', none:'aucun',
       levelHint:'Niveau conseillé',
-      chatWelcome1:'Bienvenue dans Orson Quest.',
+      chatWelcome1:'Bienvenue sur BrowserQuest Online.',
       chatWelcome2:'Le chat MMO apparaîtra ici.',
       zoneVillage:'Village',
       zoneDungeon:'Donjon',
@@ -882,15 +896,16 @@
     let atk=state.player.atkBase + Math.max(0,state.player.lvl-1)*2;
     let def=state.player.defBase + Math.floor((state.player.lvl-1)/2);
     let hpBonus=0;
-    for(const slot of ['weapon','shield','armor','ring']){
+    let moveBonus=0;
+    for(const slot of ['weapon','shield','armor','boots','ring']){
       const it=itemData(state.equipped[slot]); if(!it) continue;
-      atk += Number(it.atk||0); def += Number(it.def||0); hpBonus += Number(it.hp||0);
+      atk += Number(it.atk||0); def += Number(it.def||0); hpBonus += Number(it.hp||0); moveBonus += Number(it.ms||0);
     }
     const maxHpBase=100+(state.player.lvl-1)*12;
     const newMax=maxHpBase+hpBonus;
     const ratio=clamp(state.player.hp/Math.max(1,state.player.hpMax),0,1);
     state.player.hpMax=newMax; state.player.hp=clamp(Math.round(newMax*ratio),1,newMax);
-    state.player.atk=atk; state.player.def=def;
+    state.player.atk=atk; state.player.def=def; state.player.moveSpeed = 1 + moveBonus;
   }
 
   async function resetToFreshGuestProfile(regenerateGuest=true){
@@ -906,8 +921,8 @@
     state.teleportOpen = false;
     state.portalCast = {active:false,startedAt:0,endAt:0};
     state.clickTarget = null;
-    state.player = {x:12,y:10,hp:100,hpMax:100,atkBase:8,defBase:2,atk:8,def:2,lvl:1,xp:0,xpNeed:40,gold:0,lastAtk:0,swingUntil:0,swingDir:0,facing:'down',attackAt:0};
-    state.equipped = {weapon:null,shield:null,armor:null,ring:null};
+    state.player = {x:12,y:10,hp:100,hpMax:100,atkBase:8,defBase:2,atk:8,def:2,moveSpeed:1,lvl:1,xp:0,xpNeed:40,gold:0,lastAtk:0,swingUntil:0,swingDir:0,facing:'down',attackAt:0};
+    state.equipped = {weapon:null,shield:null,armor:null,boots:null,ring:null};
     state.inv = [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
     state.metrics = {rat_kills:0,max_floor:0,potions_found:0,kills:0};
     state.quests = [];
@@ -915,6 +930,7 @@
     state.peers = [];
     state.enemies = [];
     state.enemyProjectiles = [];
+    state.lavaTick = 0;
     state.particles = [];
     state.lootTexts = [];
     ensureQuests();
@@ -961,11 +977,22 @@
   }
 
   function genDungeon(floor){
-    const w=54,h=54,m=[];
+    const f = Math.max(1, Number(floor||1));
+    const grow = Math.max(0, f - 10);
+    const w = 54 + Math.min(22, Math.floor(grow * 1.4));
+    const h = 54 + Math.min(22, Math.floor(grow * 1.4));
+    const m=[];
     for(let y=0;y<h;y++){ const r=[]; for(let x=0;x<w;x++){ let t=(x===0||y===0||x===w-1||y===h-1)?1:(Math.random()<0.08?1:6); if(Math.random()<0.01) t=7; r.push(t);} m.push(r); }
-    const upX=10, upY=10;
-    const downX = clamp(34 + rng(14), 20, w-4);
-    const downY = clamp(30 + rng(16), 18, h-4);
+    const upX = clamp(6 + rng(Math.max(8, Math.floor(w*0.28))), 5, w-6);
+    const upY = clamp(6 + rng(Math.max(8, Math.floor(h*0.28))), 5, h-6);
+    let downX = clamp(6 + rng(w-12), 5, w-6);
+    let downY = clamp(6 + rng(h-12), 5, h-6);
+    let tries = 0;
+    while((Math.abs(downX-upX) + Math.abs(downY-upY) < Math.floor((w+h)*0.38)) && tries < 28){
+      downX = clamp(6 + rng(w-12), 5, w-6);
+      downY = clamp(6 + rng(h-12), 5, h-6);
+      tries += 1;
+    }
     // Carve a guaranteed winding path but keep it long enough to explore.
     let cx = upX, cy = upY;
     for(let steps=0; steps<220; steps++){
@@ -997,13 +1024,35 @@
     m[upY][upX]=8;
     m[downY][downX]=9;
     if(Number(floor||0) > 0 && Number(floor||0) % 5 === 0){
-      const pX = clamp(upX + 2, 2, w-3);
-      const pY = upY;
+      let pX = clamp(6 + rng(w-12), 5, w-6);
+      let pY = clamp(6 + rng(h-12), 5, h-6);
+      let pTry = 0;
+      while((Math.abs(pX-upX)+Math.abs(pY-upY) < Math.floor((w+h)*0.25) || Math.abs(pX-downX)+Math.abs(pY-downY) < Math.floor((w+h)*0.25)) && pTry < 34){
+        pX = clamp(6 + rng(w-12), 5, w-6);
+        pY = clamp(6 + rng(h-12), 5, h-6);
+        pTry += 1;
+      }
       for(let yy=-1;yy<=1;yy++) for(let xx=-1;xx<=1;xx++){
         const tx = clamp(pX+xx,1,w-2), ty = clamp(pY+yy,1,h-2);
         m[ty][tx] = 6;
       }
       m[pY][pX] = 10; // town portal return tile on checkpoint floors
+    }
+    if(f >= 11){
+      const lavaPatches = Math.min(8 + Math.floor((f-10)/2), 22);
+      for(let i=0;i<lavaPatches;i++){
+        const cx = clamp(5 + rng(w-10), 2, w-3);
+        const cy = clamp(5 + rng(h-10), 2, h-3);
+        const radius = 1 + rng(2);
+        for(let yy=-radius; yy<=radius; yy++){
+          for(let xx=-radius; xx<=radius; xx++){
+            const tx = cx + xx, ty = cy + yy;
+            if(tx<=1 || ty<=1 || tx>=w-2 || ty>=h-2) continue;
+            if(m[ty][tx]!==6) continue;
+            if(Math.random() < 0.45) m[ty][tx] = 11;
+          }
+        }
+      }
     }
     return m;
   }
@@ -1025,7 +1074,13 @@
     if(state.zone==='dungeon'){
       const miniBossChance = 0.08 + tier * 0.04 + ((state.floor % 5)===0 ? 0.12 : 0);
       if(Math.random() < miniBossChance){
-        if(tier >= 2 && Math.random() < 0.5){
+        if(Number(state.floor||1) >= 12 && Math.random() < 0.12){
+          kind = 'titan';
+          hp = Math.floor(base * 8.8);
+          atk += 14 + Math.floor(state.floor * 0.9);
+          xp = Math.floor(xp * 6.1);
+          gold += 68 + rng(90);
+        } else if(tier >= 2 && Math.random() < 0.5){
           kind = 'dragon';
           hp = Math.floor(base * 4.6);
           atk += 7 + Math.floor(state.floor / 2);
@@ -1214,6 +1269,12 @@
       ctx.fillRect(sx+Math.floor(ts*.48),sy+Math.floor(ts*.08),Math.floor(ts*.04),Math.floor(ts*.84));
       ctx.fillRect(sx+Math.floor(ts*.08),sy+Math.floor(ts*.48),Math.floor(ts*.84),Math.floor(ts*.04));
     }
+    else if(t===11){
+      ctx.fillStyle='#3b1812'; ctx.fillRect(sx,sy,ts,ts);
+      ctx.fillStyle='rgba(255,92,42,.68)'; ctx.fillRect(sx+1,sy+1,ts-2,ts-2);
+      ctx.fillStyle='rgba(255,180,70,.45)'; ctx.fillRect(sx+Math.floor(ts*.2),sy+Math.floor(ts*.25),Math.floor(ts*.6),Math.floor(ts*.2));
+      ctx.fillStyle='rgba(255,70,35,.45)'; ctx.fillRect(sx+Math.floor(ts*.15),sy+Math.floor(ts*.58),Math.floor(ts*.7),Math.floor(ts*.2));
+    }
   }
 
   function drawNPC(n,sx,sy){
@@ -1349,6 +1410,19 @@
       if(f==='left') ctx.fillRect(sx-16,sy-4,6,3);
       else if(f==='right') ctx.fillRect(sx+10,sy-4,6,3);
       else ctx.fillRect(sx+8,sy+1,5,3);
+    } else if(e.kind==='titan'){
+      const pal = {body:'#2b2320',core:'#5b3027',accent:'#ff9c53',eye:'#120a08'};
+      const body = e.hitFx>0?'#ffdccc':pal.body;
+      const core = e.hitFx>0?'#ffb38e':pal.core;
+      ctx.fillStyle=body;
+      ctx.fillRect(sx-18,sy-16,36,30);
+      ctx.fillStyle=core;
+      ctx.fillRect(sx-13,sy-11,26,20);
+      ctx.fillStyle=pal.accent;
+      ctx.fillRect(sx-6,sy-22,4,6); ctx.fillRect(sx+2,sy-22,4,6);
+      ctx.fillRect(sx-18,sy-2,5,8); ctx.fillRect(sx+13,sy-2,5,8);
+      ctx.fillStyle=pal.eye;
+      ctx.fillRect(sx-7,sy-7,3,3); ctx.fillRect(sx+4,sy-7,3,3);
     } else if(e.kind==='dragon'){
       const f = e.facing || 'down';
       const pal = e.element==='frost'
@@ -1736,6 +1810,12 @@
     useItemByIndex(bestIdx);
     return true;
   }
+  function hasPotionAvailable(){
+    return state.inv.some((raw)=>{
+      const it = itemData(raw);
+      return !!(it && it.slot === 'consumable' && inventoryQty(raw) > 0);
+    });
+  }
   function sellAllDowngrades(){
     if(!isNearRole('merchant',1.7)){ showDialog(tr('needMerchant')); return; }
     let sold=0, gain=0;
@@ -1819,8 +1899,8 @@
     };
     panes.gear.innerHTML=[
       `<div>⚔️ ${tr('weapon')}: ${gearLine('weapon')}</div>`,`<div>🛡️ ${tr('shield')}: ${gearLine('shield')}</div>`,
-      `<div>🧥 ${tr('armor')}: ${gearLine('armor')}</div>`,`<div>💍 ${tr('ring')}: ${gearLine('ring')}</div>`,
-      `<hr style="border-color:rgba(140,180,230,.25)">`,`<div>ATK: <b>${p.atk}</b> · DEF: <b>${p.def}</b> · HP Max: <b>${p.hpMax}</b></div>`
+      `<div>🧥 ${tr('armor')}: ${gearLine('armor')}</div>`,`<div>👢 ${tr('boots')}: ${gearLine('boots')}</div>`,`<div>💍 ${tr('ring')}: ${gearLine('ring')}</div>`,
+      `<hr style="border-color:rgba(140,180,230,.25)">`,`<div>ATK: <b>${p.atk}</b> · DEF: <b>${p.def}</b> · HP Max: <b>${p.hpMax}</b> · SPD: <b>+${Math.max(0, Math.round((Number(p.moveSpeed||1)-1)*100))}%</b></div>`
     ].join('');
 
     ensureQuests();
@@ -1828,7 +1908,7 @@
 
     panes.bags.innerHTML=(`<div style="margin-bottom:8px"><button class="btn" data-sell-downgrades="1">${state.lang==='fr'?'Vendre tous les downgrades':'Sell all downgrades'}</button></div>`)+(state.inv.length?state.inv.map((raw,idx)=>{
       const it=itemData(raw)||{slot:'misc',atk:0,def:0,hp:0,heal:0,rarity:'common',color:'#9fb2d8',name:String(raw)};
-      const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.heal?` · Heal ${it.heal}`:'');
+      const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.ms?` · SPD +${Math.round(Number(it.ms||0)*100)}%`:'')+(it.heal?` · Heal ${it.heal}`:'');
       const rarityChip = (it.slot==='consumable') ? '' : `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid ${it.color};color:${it.color};margin-left:6px">${rarityLabel(it.rarity)}</span>`;
       const qty = inventoryQty(raw);
       const qtyChip = qty>1 ? `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid rgba(120,160,220,.45);color:#cfe3ff;margin-left:6px">x${qty}</span>` : '';
@@ -1842,14 +1922,14 @@
       const it=itemData(encodeItem(n,'common')) || {slot:String(base.slot||'item'),atk:0,def:0,hp:0,heal:0,rarity:'common',color:'#9fb2d8'};
       const cost=shopBuyCost(base);
       const rarityChip = `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid ${it.color};color:${it.color};margin-left:6px">${rarityLabel(it.rarity)}</span>`;
-      const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.heal?` · Heal ${it.heal}`:'');
+      const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.ms?` · SPD +${Math.round(Number(it.ms||0)*100)}%`:'')+(it.heal?` · Heal ${it.heal}`:'');
       return `<div class="item"><div><div><b>${itemLocalizedName(n)}</b>${rarityChip}</div><div class="k">${stat} · ${cost} ${tr('gold')}</div></div><button data-buy-index="${idx}">${tr('buy')}</button></div>`;
     }).join('');
     panes.shop.innerHTML=`${stockHtml}<div class="k">${tr('merchantHint')}</div>`;
     const chatFocused = (document.activeElement && (document.activeElement.id === 'chatInput'));
     if(!chatFocused || !panel.querySelector('#chatList')){
       panes.chat.innerHTML = `
-        <div class="k">${tr('onlineInZone')}: ${Math.max(1, Number(state.onlineTotal||1))}</div>
+        <div class="k"><span id="chatOnlineLabel">${tr('onlineInZone')}</span>: <span id="chatOnlineValue">${Math.max(1, Number(state.onlineTotal||1))}</span></div>
         <div id="chatList" style="max-height:min(42vh,260px);overflow:auto;border:1px solid rgba(120,160,220,.22);border-radius:8px;padding:6px;margin:6px 0;background:rgba(12,20,35,.45)">
           <div class="k">${tr('noMessages')}</div>
         </div>
@@ -1860,10 +1940,20 @@
       `;
     }
     const chatListEl = panel.querySelector('#chatList');
+    const chatOnlineEl = panel.querySelector('#chatOnlineValue');
+    const chatOnlineLabel = panel.querySelector('#chatOnlineLabel');
+    if(chatOnlineLabel) chatOnlineLabel.textContent = tr('onlineInZone');
+    if(chatOnlineEl) chatOnlineEl.textContent = String(Math.max(1, Number(state.onlineTotal||1)));
     if(chatListEl){
+      const nearBottom = (chatListEl.scrollHeight - chatListEl.scrollTop - chatListEl.clientHeight) < 28;
       chatListEl.innerHTML = state.chatMessages.length
         ? state.chatMessages.map(m => `<div><b>${String(m.display_name||'Player')}</b>: ${String(m.message||'')}</div>`).join('')
         : `<div class="k">${tr('noMessages')}</div>`;
+      const forceBottom = state.activeTab === 'chat' && panel.classList.contains('open');
+      if(forceBottom || state.chatStick || nearBottom){
+        state.chatStick = true;
+        requestAnimationFrame(()=>{ chatListEl.scrollTop = chatListEl.scrollHeight; });
+      }
     }
   }
 
@@ -2017,7 +2107,11 @@
     } catch {}
   }
 
-  function setTab(name){ for(const b of document.querySelectorAll('.tab')) b.classList.toggle('active',b.dataset.tab===name); for(const [k,p] of Object.entries(panes)) p.classList.toggle('active',k===name); }
+  function setTab(name){
+    state.activeTab = String(name||'gear');
+    for(const b of document.querySelectorAll('.tab')) b.classList.toggle('active',b.dataset.tab===name);
+    for(const [k,p] of Object.entries(panes)) p.classList.toggle('active',k===name);
+  }
   function stickChatToBottom(){
     const list = panel.querySelector('#chatList');
     if(list) list.scrollTop = list.scrollHeight;
@@ -2037,6 +2131,7 @@
   function openChatPanel(){
     panel.classList.add('open');
     setTab('chat');
+    state.chatStick = true;
     setTimeout(()=>{
       stickChatToBottom();
       const input = panel.querySelector('#chatInput');
@@ -2074,6 +2169,7 @@
   function update(dt){
     if(state.dead || state.sessionConflict) return;
     const nowPerf = performance.now();
+    let enemyDamagedPlayer = false;
     let vx=0,vy=0;
     if(state.keys.w) vy-=1; if(state.keys.s) vy+=1; if(state.keys.a) vx-=1; if(state.keys.d) vx+=1;
     const manualMoveInput = !!(state.keys.w || state.keys.a || state.keys.s || state.keys.d);
@@ -2093,10 +2189,23 @@
       if(Math.abs(vx)>Math.abs(vy)) state.player.facing=vx<0?'left':'right'; else state.player.facing=vy<0?'up':'down';
       state.player.swingDir=Math.atan2(vy,vx);
       const l=Math.hypot(vx,vy)||1; vx/=l; vy/=l;
-      const speed=3.3*dt;
+      const speed=(3.3 * Math.max(0.75, Number(state.player.moveSpeed||1)))*dt;
       const nx=state.player.x+vx*speed, ny=state.player.y+vy*speed;
       if(passable(Math.floor(nx),Math.floor(state.player.y))) state.player.x=nx;
       if(passable(Math.floor(state.player.x),Math.floor(ny))) state.player.y=ny;
+    }
+    const standingTile = tileAt(Math.floor(state.player.x), Math.floor(state.player.y));
+    if(standingTile===11){
+      state.lavaTick = Number(state.lavaTick||0) - dt;
+      if(state.lavaTick <= 0){
+        const burn = Math.max(2, Math.floor(Number(state.player.hpMax||100) * 0.03));
+        state.player.hp -= burn;
+        enemyDamagedPlayer = true;
+        state.lavaTick = 0.75;
+        log(`🔥 Lava -${burn}`);
+      }
+    } else {
+      state.lavaTick = 0;
     }
 
     // smooth camera
@@ -2106,29 +2215,28 @@
     state.view.camY += (ty - state.view.camY) * 0.18;
 
     // enemies
-    let enemyDamagedPlayer = false;
     for(const e of state.enemies){
       const dx=state.player.x-e.x, dy=state.player.y-e.y, d=Math.hypot(dx,dy)||1;
       const minAdj = 1.05;
-      const moveSpeed = (e.kind==='brute'||e.kind==='ogre') ? 0.82 : (e.kind==='dragon' ? 1.05 : 1.6);
+      const moveSpeed = (e.kind==='titan') ? 0.42 : ((e.kind==='brute'||e.kind==='ogre') ? 0.82 : (e.kind==='dragon' ? 1.05 : 1.6));
       if(Math.abs(dx) > Math.abs(dy)) e.facing = dx>0 ? 'right' : 'left';
       else e.facing = dy>0 ? 'down' : 'up';
       if(d<9 && d>minAdj){
         e.x+=(dx/d)*dt*moveSpeed;
         e.y+=(dy/d)*dt*moveSpeed;
       }
-      const atkRange = (e.kind==='dragon') ? 1.55 : ((e.kind==='brute'||e.kind==='ogre') ? 1.4 : 1.25);
-      if(e.kind==='dragon' && d<=6.4 && d>1.7){
+      const atkRange = (e.kind==='dragon') ? 1.18 : (e.kind==='titan' ? 1.9 : ((e.kind==='brute'||e.kind==='ogre') ? 1.4 : 1.25));
+      if(e.kind==='dragon' && d<=6.4 && d>1.35){
         e.projCd = Number(e.projCd||0) - dt;
         if(e.projCd <= 0){
           const vx = (dx/d) * 5.2;
           const vy = (dy/d) * 5.2;
           const color = e.element==='frost' ? '#89d6ff' : (e.element==='shadow' ? '#c69bff' : '#ff9b72');
-          state.enemyProjectiles.push({x:e.x,y:e.y,vx,vy,life:1.45,color,dmg:Math.max(2,Math.floor(e.atk*0.55))});
+          state.enemyProjectiles.push({x:e.x,y:e.y,px:e.x,py:e.y,owner:e.id,vx,vy,life:1.45,color,dmg:Math.max(2,Math.floor(e.atk*0.55))});
           e.projCd = 1.4 + Math.random()*0.8;
         }
       }
-      if(d<=atkRange){
+      if(d<=atkRange && !(e.kind==='dragon' && d>1.35)){
         e.cd-=dt;
         if(e.cd<=0){
           const floorSpike = floorTier(state.floor||1) * 0.35;
@@ -2211,12 +2319,25 @@
     maybeRespawnEnemies(dt);
 
     for(const p of state.enemyProjectiles){
+      p.px = Number(p.x||0);
+      p.py = Number(p.y||0);
       p.x += Number(p.vx||0) * dt;
       p.y += Number(p.vy||0) * dt;
       p.life -= dt;
       const tx = Math.floor(p.x), ty = Math.floor(p.y);
       if(!passable(tx,ty)) p.life = 0;
-      if(dist(p.x,p.y,state.player.x,state.player.y) < 0.78){
+      const hitNow = dist(p.x,p.y,state.player.x,state.player.y) < 0.34;
+      const hitSweep = (() => {
+        const ax = Number(p.px||p.x), ay = Number(p.py||p.y), bx = Number(p.x||0), by = Number(p.y||0);
+        const vx = bx - ax, vy = by - ay;
+        const wx = state.player.x - ax, wy = state.player.y - ay;
+        const vv = Math.max(0.000001, vx*vx + vy*vy);
+        const t = clamp((wx*vx + wy*vy) / vv, 0, 1);
+        const cx = ax + vx*t, cy = ay + vy*t;
+        return dist(cx,cy,state.player.x,state.player.y) < 0.30;
+      })();
+      const preciseHit = hitNow || hitSweep;
+      if(preciseHit){
         state.player.hp -= Math.max(1, Number(p.dmg||2));
         enemyDamagedPlayer = true;
         p.life = 0;
@@ -2295,6 +2416,12 @@
     document.getElementById('hpTxt').textContent=`${Math.floor(state.player.hp)} / ${state.player.hpMax}`;
     document.getElementById('hpBar').style.width=`${clamp((state.player.hp/state.player.hpMax)*100,0,100)}%`;
     document.getElementById('xpBar').style.width=`${clamp((state.player.xp/state.player.xpNeed)*100,0,100)}%`;
+    if(potionBtn){
+      const canPotion = hasPotionAvailable() && !state.dead && !state.sessionConflict;
+      potionBtn.classList.toggle('is-disabled', !canPotion);
+      potionBtn.disabled = !canPotion;
+      potionBtn.title = state.lang==='fr' ? 'Utiliser la meilleure potion' : 'Use best potion';
+    }
     if(chatTicker){
       const last = state.chatMessages.slice(-2);
       const lines = chatTicker.querySelectorAll('.line');
@@ -2462,6 +2589,7 @@
 
   for(const b of document.querySelectorAll('#dpad button[data-k]')) bindHold(b,b.dataset.k);
   document.getElementById('actionBtn').addEventListener('pointerdown',(e)=>{ e.preventDefault(); tryAutoFullscreen(); if(!state.dead) doAction(); },{passive:false});
+  potionBtn?.addEventListener('pointerdown',(e)=>{ e.preventDefault(); tryAutoFullscreen(); if(!state.dead && !state.sessionConflict) useBestPotion(); },{passive:false});
 
   function isTypingTarget(el){
     if(!el || !(el instanceof HTMLElement)) return false;
@@ -2575,6 +2703,12 @@
       setTimeout(()=>syncChatViewport(), 0);
     }
   });
+  panel.addEventListener('scroll', (e)=>{
+    const t = e.target;
+    if(!(t instanceof HTMLElement) || t.id !== 'chatList') return;
+    const gap = t.scrollHeight - t.scrollTop - t.clientHeight;
+    state.chatStick = gap < 28;
+  }, true);
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize', syncChatViewport);
     window.visualViewport.addEventListener('scroll', syncChatViewport);
