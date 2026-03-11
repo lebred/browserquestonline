@@ -31,6 +31,11 @@
     .panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
     .panel-close{border:1px solid rgba(160,190,235,.55);background:rgba(18,31,54,.75);color:#e7f0ff;border-radius:8px;padding:2px 8px;font-weight:900;cursor:pointer}
     .panel.open{display:flex}
+    .panel.open ~ .dpad,
+    .panel.open ~ .action-wrap{
+      pointer-events:none;
+      opacity:.45;
+    }
     .tabs{display:flex;gap:6px;flex-wrap:wrap}
     .tab{border:1px solid var(--line);background:rgba(19,33,59,.52);color:#dce8ff;border-radius:9px;padding:5px 8px;font-weight:700;cursor:pointer;font-size:12px}
     .tab.active{background:#274f99}
@@ -103,7 +108,18 @@
       .k{font-size:9px}
       .v{font-size:15px}
       .bar{height:6px}
-      .dpad{display:none}
+      .dpad{
+        display:grid;
+        left:8px;
+        bottom:58px;
+        grid-template-columns:44px 44px 44px;
+        grid-template-rows:44px 44px 44px;
+        gap:5px;
+      }
+      .dpad button{
+        border-radius:10px;
+        font-size:16px;
+      }
       .hint{display:none}
       .action-wrap{right:8px;bottom:58px}
       .panel{
