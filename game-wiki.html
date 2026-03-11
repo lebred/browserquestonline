@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Orson Quest Wiki</title>
+  <title>BrowserQuest Online Wiki - Items, Floors, Bosses, Drops</title>
+  <meta name="description" content="Wiki officiel BrowserQuest Online: progression, floors, drops, raretés, items, boss titans, contrôles mobile/PC et mécaniques détaillées." />
+  <link rel="canonical" href="https://browserquest.online/wiki" />
   <style>
     :root{
       --bg:#071225;
@@ -21,7 +23,7 @@
       --shadow:0 14px 28px rgba(0,0,0,.28);
     }
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0}
+    html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
     body{
       color:var(--text);
       font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;
@@ -79,7 +81,7 @@
     ul{margin:8px 0 0 18px;padding:0}
     li{margin:6px 0}
 
-    table{width:100%;border-collapse:collapse;font-size:14px;background:rgba(7,16,30,.45);border-radius:12px;overflow:hidden}
+    table{width:100%;border-collapse:collapse;font-size:14px;background:rgba(7,16,30,.45);border-radius:12px;overflow:hidden;table-layout:fixed;word-break:break-word}
     th,td{padding:9px 8px;border-bottom:1px solid rgba(120,160,220,.22);text-align:left;vertical-align:top}
     th{background:rgba(30,58,102,.5);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#dbe9ff}
     tr:last-child td{border-bottom:none}
@@ -104,7 +106,7 @@
 <div class="wrap">
   <header class="hero">
     <div>
-      <h1 class="title">📚 ORSON QUEST WIKI</h1>
+      <h1 class="title">📚 BROWSERQUEST ONLINE WIKI</h1>
       <div class="subtitle" id="subtitle"></div>
       <div class="chips" style="margin-top:8px">
         <span class="chip c-common" id="chipCommon"></span>
@@ -116,6 +118,7 @@
     <div class="actions">
       <button class="btn alt" id="langBtn">🌐 FR</button>
       <a class="btn" href="/game" id="playBtn">🎮 Play</a>
+      <a class="btn alt" href="/wiki/blog" id="blogBtn">📰 Blog</a>
     </div>
   </header>
 
@@ -131,6 +134,7 @@
       <a href="#enemies" id="toc7"></a>
       <a href="#quests" id="toc8"></a>
       <a href="#controls" id="toc9"></a>
+      <a href="/wiki/blog" id="toc10">📰 Blog SEO</a>
     </aside>
 
     <main class="content">
@@ -188,6 +192,11 @@
         <h2 id="controlTitle"></h2>
         <ul id="controlList"></ul>
       </section>
+      <section class="card" id="seo">
+        <h2>🔎 SEO & Discovery</h2>
+        <p class="lead">BrowserQuest Online publie des pages wiki indexables et un blog dédié à la découverte du jeu. Le sitemap est disponible à <code>/sitemap.xml</code>.</p>
+        <p>Pour Google Search Console: ajoutez la propriété <code>https://browserquest.online</code>, puis soumettez <code>https://browserquest.online/sitemap.xml</code>.</p>
+      </section>
     </main>
   </div>
 </div>
@@ -212,12 +221,14 @@
       {tier:1, floors:'Dungeon 6-10', items:['Épée de garde','Bouclier renforcé','Anneau d\'acier','Potion HP','Potion HP++']},
       {tier:2, floors:'Dungeon 11-15', items:['Lame runique','Bouclier runique','Armure du gardien','Anneau runique','Potion HP++']},
       {tier:3, floors:'Dungeon 16+', items:['Épée draconique','Égide antique','Armure de dragon','Anneau du phénix','Potion HP++']},
+      {tier:4, floors:'Dungeon 21+', items:['Claymore abyssale','Rempart céleste','Bottes astrales','Armure du titan','Anneau du vide','Potion HP+++']},
     ],
     shopTiers: [
       {tier:0, unlock:'max_floor 1-5', items:['Épée courte','Bouclier en bois','Tunique renforcée','Anneau d\'acier','Potion HP']},
       {tier:1, unlock:'max_floor 6-10', items:['Épée de garde','Bouclier renforcé','Tunique renforcée','Anneau d\'acier','Potion HP','Potion HP++']},
       {tier:2, unlock:'max_floor 11-15', items:['Lame runique','Bouclier runique','Armure du gardien','Anneau runique','Potion HP++']},
       {tier:3, unlock:'max_floor 16+', items:['Épée draconique','Égide antique','Armure de dragon','Anneau du phénix','Potion HP++']},
+      {tier:4, unlock:'max_floor 21+', items:['Claymore abyssale','Rempart céleste','Bottes astrales','Armure du titan','Anneau du vide','Potion HP++','Potion HP+++']},
     ],
     items:[
       {n:'Dague rouillée',s:'weapon',atk:2,def:0,hp:0,heal:0,v:12},
@@ -225,20 +236,26 @@
       {n:'Épée de garde',s:'weapon',atk:6,def:1,hp:0,heal:0,v:85},
       {n:'Lame runique',s:'weapon',atk:10,def:1,hp:4,heal:0,v:180},
       {n:'Épée draconique',s:'weapon',atk:15,def:2,hp:8,heal:0,v:320},
+      {n:'Claymore abyssale',s:'weapon',atk:21,def:4,hp:16,heal:0,v:680},
       {n:'Bouclier en bois',s:'shield',atk:0,def:2,hp:8,heal:0,v:35},
       {n:'Bouclier renforcé',s:'shield',atk:0,def:4,hp:16,heal:0,v:78},
       {n:'Bouclier runique',s:'shield',atk:0,def:7,hp:26,heal:0,v:190},
       {n:'Égide antique',s:'shield',atk:1,def:10,hp:36,heal:0,v:340},
+      {n:'Rempart céleste',s:'shield',atk:2,def:15,hp:58,heal:0,v:720},
       {n:'Bottes légères',s:'armor',atk:0,def:1,hp:0,heal:0,v:18},
+      {n:'Bottes astrales',s:'armor',atk:3,def:10,hp:30,heal:0,v:760},
       {n:'Tunique renforcée',s:'armor',atk:0,def:3,hp:12,heal:0,v:60},
       {n:'Armure du gardien',s:'armor',atk:0,def:8,hp:34,heal:0,v:220},
       {n:'Armure de dragon',s:'armor',atk:2,def:12,hp:52,heal:0,v:390},
+      {n:'Armure du titan',s:'armor',atk:4,def:18,hp:84,heal:0,v:780},
       {n:'Amulette terne',s:'ring',atk:0,def:0,hp:10,heal:0,v:26},
       {n:'Anneau d\'acier',s:'ring',atk:1,def:1,hp:6,heal:0,v:54},
       {n:'Anneau runique',s:'ring',atk:3,def:2,hp:16,heal:0,v:210},
       {n:'Anneau du phénix',s:'ring',atk:5,def:4,hp:26,heal:0,v:360},
+      {n:'Anneau du vide',s:'ring',atk:8,def:6,hp:40,heal:0,v:790},
       {n:'Potion HP',s:'consumable',atk:0,def:0,hp:0,heal:25,v:16},
       {n:'Potion HP++',s:'consumable',atk:0,def:0,hp:0,heal:80,v:85},
+      {n:'Potion HP+++',s:'consumable',atk:0,def:0,hp:0,heal:160,v:220},
     ],
     enemies:[
       {e:'Rat 🐀',z:'Village',hp:'12',atk:'3',xp:'8',g:'2-6',note:'Fast starter mob.'},
@@ -246,6 +263,8 @@
       {e:'Brute 🧱',z:'Dungeon',hp:'~2.5x base',atk:'+2 + floor/2',xp:'~2.0x',g:'+8..+19',note:'Tankier melee.'},
       {e:'Ogre 👹',z:'Dungeon miniboss roll',hp:'~3.5x base',atk:'+5 + floor/3',xp:'~2.5x',g:'+14..+31',note:'Slow heavy bruiser.'},
       {e:'Dragon 🐉',z:'Dungeon miniboss roll (tier≥2)',hp:'~4.6x base',atk:'+7 + floor/2',xp:'~3.1x',g:'+24..+53',note:'Melee + ranged projectiles (fire/frost/shadow by floor).'},
+      {e:'Titan 🦖',z:'Dungeon 12+ rare boss',hp:'~12.6x base',atk:'+20 + floor*1.15',xp:'~7.8x (with floor minimum)',g:'+95..+214',note:'Ultra tanky raid-type boss.'},
+      {e:'Archon 👿',z:'Dungeon 21+ rare boss',hp:'~7.4x base',atk:'+15 + floor*0.95',xp:'~4.9x (with floor minimum)',g:'+60..+145',note:'Late-game elite forcing gear progression.'},
     ],
     quests:[
       {id:'q_rat_hunt',q:'Rat Hunter',o:'Kill 5 rats',r:'25 gold + 20 XP'},

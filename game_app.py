@@ -25,6 +25,11 @@ AUTH_COOKIE_NAME = os.getenv('BQ_AUTH_COOKIE', 'bq_session').strip() or 'bq_sess
 AUTH_START_PATH = os.getenv('BQ_AUTH_START_PATH', '/api/auth/google/start').strip() or '/api/auth/google/start'
 GAME_TZ = os.getenv('BQ_GAME_TIMEZONE', 'America/Montreal').strip() or 'America/Montreal'
 MAX_GUEST_IDS_PER_IP_PER_DAY = max(5, int(os.getenv('BQ_MAX_GUEST_IDS_PER_IP_PER_DAY', '40') or '40'))
+GAME_RENAME_COST = max(1, int(os.getenv('BQ_GAME_RENAME_COST', '10000') or '10000'))
+GAME_BAD_WORDS = {
+    'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'cunt',
+    'tabarnak', 'osti', 'calisse', 'criss', 'encule', 'enculé', 'pute', 'salope', 'merde',
+}
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -82,6 +87,38 @@ def _game_track_daily_kills(cur: sqlite3.Cursor, user_key: str, display_name: st
         ''',
         (day_key, user_key, display_name[:120], delta, now_iso),
     )
+
+
+def _contains_bad_words(txt: str) -> bool:
+    t = re.sub(r'[^a-z0-9àâçéèêëîïôûùüÿñæœ]+', '', str(txt or '').strip().lower())
+    if not t:
+        return False
+    for w in GAME_BAD_WORDS:
+        ww = re.sub(r'[^a-z0-9àâçéèêëîïôûùüÿñæœ]+', '', str(w).lower())
+        if ww and ww in t:
+            return True
+    return False
+
+
+def _safe_display_name(raw: str, default: str = 'Player') -> str:
+    n = re.sub(r'\s+', ' ', str(raw or '').strip())[:120]
+    if not n:
+        return default
+    if _contains_bad_words(n):
+        return default
+    return n
+
+
+def _validate_player_name(raw: str) -> tuple[bool, str]:
+    n = re.sub(r'\s+', ' ', str(raw or '').strip())[:32]
+    if not re.match(r'^[A-Za-zÀ-ÖØ-öø-ÿ0-9 _-]{3,18}$', n or ''):
+        return (False, '')
+    if _contains_bad_words(n):
+        return (False, '')
+    # anti-spam: reject too many repeated chars
+    if re.search(r'(.)\1{4,}', n):
+        return (False, '')
+    return (True, n)
 
 
 def _request_ip(request: Request) -> str:
@@ -320,35 +357,23 @@ def _auth_session_user(sid: str) -> dict | None:
 
 
 def _game_identity(request: Request, guest_id: str | None = None) -> tuple[str, str, bool]:
-    def _clean_text(raw: str, max_len: int = 120) -> str:
-        s = re.sub(r'\s+', ' ', str(raw or '').strip())[:max_len]
-        return s
-
-    bad_words = {
-        'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'cunt',
-        'tabarnak', 'osti', 'calisse', 'criss', 'encule', 'enculé', 'pute', 'salope', 'merde',
-    }
-
-    def _contains_bad_words(txt: str) -> bool:
-        t = _clean_text(txt, 300).lower()
-        t = re.sub(r'[^a-z0-9àâçéèêëîïôûùüÿñæœ]+', '', t)
-        for w in bad_words:
-            ww = re.sub(r'[^a-z0-9àâçéèêëîïôûùüÿñæœ]+', '', w.lower())
-            if ww and ww in t:
-                return True
-        return False
-
-    def _safe_display_name(name: str) -> str:
-        n = _clean_text(name, 120) or 'Player'
-        if _contains_bad_words(n):
-            return 'Player'
-        return n
-
     sid = request.cookies.get(_auth_cookie_name(), '')
     user = _auth_session_user(sid)
     if user and user.get('user_id'):
-        name = _safe_display_name(str(user.get('full_name') or user.get('email') or f"user-{user['user_id']}"))
-        return (f"user:{int(user['user_id'])}", name[:120], True)
+        user_key = f"user:{int(user['user_id'])}"
+        fallback = _safe_display_name(str(user.get('full_name') or user.get('email') or f"user-{user['user_id']}"))
+        name = fallback
+        try:
+            con = _sec_db()
+            cur = con.cursor()
+            cur.execute('SELECT display_name FROM game_profiles WHERE user_key=? LIMIT 1', (user_key,))
+            row = cur.fetchone()
+            con.close()
+            if row and str(row['display_name'] or '').strip():
+                name = _safe_display_name(str(row['display_name'] or ''), default=fallback)
+        except Exception:
+            name = fallback
+        return (user_key, name[:120], True)
     gid = re.sub(r'[^a-zA-Z0-9_-]', '', str(guest_id or '').strip())[:80]
     if not gid:
         gid = 'guest'
@@ -637,10 +662,84 @@ def game_wiki_page():
     return FileResponse(str(STATIC_DIR / 'game-wiki.html'))
 
 
+@app.get('/wiki/blog')
+def game_blog_page():
+    return FileResponse(str(STATIC_DIR / 'game-blog.html'))
+
+
+@app.get('/sitemap.xml')
+def sitemap_xml():
+    return FileResponse(str(STATIC_DIR / 'sitemap.xml'), media_type='application/xml')
+
+
+@app.get('/robots.txt')
+def robots_txt():
+    return FileResponse(str(STATIC_DIR / 'robots.txt'), media_type='text/plain; charset=utf-8')
+
+
 @app.get('/api/game/me')
 def game_me(request: Request, guest_id: str = ''):
     user_key, display_name, logged = _game_identity(request, guest_id=guest_id)
     return {'ok': True, 'logged_in': bool(logged), 'user_key': user_key, 'display_name': display_name}
+
+
+@app.post('/api/game/profile/name')
+def game_profile_name_set(request: Request, payload: dict = Body(...)):
+    sid = request.cookies.get(_auth_cookie_name(), '')
+    user = _auth_session_user(sid)
+    if not (user and user.get('user_id')):
+        raise HTTPException(status_code=401, detail='login required')
+    user_key = f"user:{int(user['user_id'])}"
+    ok_name, clean_name = _validate_player_name(str(payload.get('name') or ''))
+    if not ok_name:
+        return {'ok': False, 'reason': 'bad_name'}
+
+    cost = GAME_RENAME_COST
+    now_iso = datetime.now(timezone.utc).isoformat()
+    con = _sec_db()
+    cur = con.cursor()
+    cur.execute('SELECT save_json FROM game_saves WHERE user_key=? LIMIT 1', (user_key,))
+    row = cur.fetchone()
+    try:
+        save_obj = json.loads(str(row['save_json'] or '{}')) if row else {}
+    except Exception:
+        save_obj = {}
+    player = save_obj.get('player') if isinstance(save_obj.get('player'), dict) else {}
+    current_gold = max(0, int(player.get('gold') or 0))
+    if current_gold < cost:
+        con.close()
+        return {'ok': False, 'reason': 'not_enough_gold', 'required': cost}
+
+    player['gold'] = current_gold - cost
+    save_obj['player'] = player
+    save_obj['t'] = int(time.time() * 1000)
+    save_json = json.dumps(save_obj, ensure_ascii=False)[:300000]
+    cur.execute(
+        '''
+        INSERT INTO game_saves(user_key, save_json, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_key) DO UPDATE SET
+            save_json=excluded.save_json,
+            updated_at=excluded.updated_at
+        ''',
+        (user_key, save_json, now_iso),
+    )
+    cur.execute(
+        '''
+        INSERT INTO game_profiles(user_key, display_name, level, gold, max_floor, kills, quests_done, updated_at, created_at)
+        VALUES (?, ?, 1, ?, 0, 0, 0, ?, ?)
+        ON CONFLICT(user_key) DO UPDATE SET
+            display_name=excluded.display_name,
+            gold=excluded.gold,
+            updated_at=excluded.updated_at
+        ''',
+        (user_key, clean_name[:120], int(player['gold']), now_iso, now_iso),
+    )
+    cur.execute('UPDATE game_presence SET display_name=?, updated_at=? WHERE user_key=?', (clean_name[:120], now_iso, user_key))
+    cur.execute('UPDATE game_daily_kills SET display_name=?, updated_at=? WHERE user_key=?', (clean_name[:120], now_iso, user_key))
+    con.commit()
+    con.close()
+    return {'ok': True, 'display_name': clean_name[:120], 'gold': int(player['gold']), 'cost': cost}
 
 
 @app.get('/api/game/save')
@@ -1074,8 +1173,7 @@ def game_chat_send(request: Request, payload: dict = Body(...)):
     if not msg:
         raise HTTPException(status_code=400, detail='message required')
     msg = re.sub(r'\s+', ' ', msg)[:280]
-    bad_words = ['fuck', 'fucking', 'shit', 'bitch', 'asshole', 'cunt', 'tabarnak', 'osti', 'calisse', 'criss', 'encule', 'enculé', 'pute', 'salope', 'merde']
-    for w in bad_words:
+    for w in GAME_BAD_WORDS:
         msg = re.sub(re.escape(w), '*' * len(w), msg, flags=re.IGNORECASE)
     now_iso = datetime.now(timezone.utc).isoformat()
     con = _sec_db(); cur = con.cursor()

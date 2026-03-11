@@ -264,23 +264,29 @@
     'Épée de garde': {slot:'weapon',atk:6,def:1,hp:0,value:85},
     'Lame runique': {slot:'weapon',atk:10,def:1,hp:4,value:180},
     'Épée draconique': {slot:'weapon',atk:15,def:2,hp:8,value:320},
+    'Claymore abyssale': {slot:'weapon',atk:21,def:4,hp:16,value:680},
     'Bouclier en bois': {slot:'shield',atk:0,def:2,hp:8,value:35},
     'Bouclier renforcé': {slot:'shield',atk:0,def:4,hp:16,value:78},
     'Bouclier runique': {slot:'shield',atk:0,def:7,hp:26,value:190},
     'Égide antique': {slot:'shield',atk:1,def:10,hp:36,value:340},
+    'Rempart céleste': {slot:'shield',atk:2,def:15,hp:58,value:720},
     'Bottes légères': {slot:'boots',atk:0,def:1,hp:0,ms:0.02,value:18},
     'Bottes du pisteur': {slot:'boots',atk:0,def:2,hp:6,ms:0.04,value:80},
     'Bottes runiques': {slot:'boots',atk:1,def:4,hp:12,ms:0.06,value:210},
     'Bottes du néant': {slot:'boots',atk:2,def:7,hp:20,ms:0.09,value:420},
+    'Bottes astrales': {slot:'boots',atk:3,def:10,hp:30,ms:0.12,value:760},
     'Tunique renforcée': {slot:'armor',atk:0,def:3,hp:12,value:60},
     'Armure du gardien': {slot:'armor',atk:0,def:8,hp:34,value:220},
     'Armure de dragon': {slot:'armor',atk:2,def:12,hp:52,value:390},
+    'Armure du titan': {slot:'armor',atk:4,def:18,hp:84,value:780},
     'Amulette terne': {slot:'ring',atk:0,def:0,hp:10,value:26},
     'Anneau d\'acier': {slot:'ring',atk:1,def:1,hp:6,value:54},
     'Anneau runique': {slot:'ring',atk:3,def:2,hp:16,value:210},
     'Anneau du phénix': {slot:'ring',atk:5,def:4,hp:26,value:360},
+    'Anneau du vide': {slot:'ring',atk:8,def:6,hp:40,value:790},
     'Potion HP': {slot:'consumable',atk:0,def:0,hp:0,heal:25,value:16},
     'Potion HP++': {slot:'consumable',atk:0,def:0,hp:0,heal:80,value:85},
+    'Potion HP+++': {slot:'consumable',atk:0,def:0,hp:0,heal:160,value:220},
   };
   const ITEM_LABELS = {
     en:{
@@ -289,23 +295,29 @@
       'Épée de garde':'Guard Sword',
       'Lame runique':'Runic Blade',
       'Épée draconique':'Draconic Sword',
+      'Claymore abyssale':'Abyssal Claymore',
       'Bouclier en bois':'Wooden Shield',
       'Bouclier renforcé':'Reinforced Shield',
       'Bouclier runique':'Runic Shield',
       'Égide antique':'Ancient Aegis',
+      'Rempart céleste':'Celestial Bulwark',
       'Bottes légères':'Light Boots',
       'Bottes du pisteur':'Tracker Boots',
       'Bottes runiques':'Runic Boots',
       'Bottes du néant':'Void Boots',
+      'Bottes astrales':'Astral Boots',
       'Tunique renforcée':'Reinforced Tunic',
       'Armure du gardien':'Guardian Armor',
       'Armure de dragon':'Dragon Armor',
+      'Armure du titan':'Titan Armor',
       'Amulette terne':'Faded Amulet',
       'Anneau d\'acier':'Steel Ring',
       'Anneau runique':'Runic Ring',
       'Anneau du phénix':'Phoenix Ring',
+      'Anneau du vide':'Void Ring',
       'Potion HP':'HP Potion',
       'Potion HP++':'HP Potion++',
+      'Potion HP+++':'HP Potion+++',
     },
     fr:{},
   };
@@ -504,6 +516,7 @@
     ['Épée de garde','Bouclier renforcé','Bottes du pisteur','Tunique renforcée','Anneau d\'acier','Potion HP','Potion HP++'],
     ['Lame runique','Bouclier runique','Bottes runiques','Armure du gardien','Anneau runique','Potion HP++'],
     ['Épée draconique','Égide antique','Bottes du néant','Armure de dragon','Anneau du phénix','Potion HP++'],
+    ['Claymore abyssale','Rempart céleste','Bottes astrales','Armure du titan','Anneau du vide','Potion HP++','Potion HP+++'],
   ];
   const QUESTS = [
     {id:'q_rat_hunt',title:'Rat Hunter',metric:'rat_kills',target:5,reward:{gold:25,xp:20}},
@@ -605,6 +618,13 @@
       deathAvoided:'Near death avoided',
       logoutConfirm:'Log out now? You will switch to a fresh visitor profile.',
       switchedGuest:'Switched to a fresh guest profile.',
+      unstuckPortal:'Unstuck: Town Portal brought you back to town.',
+      renamerPrompt:'Enter your new nickname (3-18 chars). Cost: 10000 gold.',
+      renamerTooPoor:'You need 10000 gold to rename.',
+      renamerInvalid:'Invalid nickname. Use 3-18 chars (letters, numbers, space, _ -).',
+      renamerBad:'Nickname blocked by content filter.',
+      renamedOk:'Nickname updated.',
+      actionRenamer:'Action: Renamer',
     },
     fr:{
       menu:'Menu', gear:'Équipement', quests:'Quêtes', bags:'Inventaire', shop:'Marchand', rank:'Classement', log:'Journal',
@@ -672,6 +692,13 @@
       deathAvoided:'Mort évitée',
       logoutConfirm:'Se déconnecter maintenant? Vous passerez sur un nouveau profil visiteur.',
       switchedGuest:'Bascule vers un nouveau profil visiteur.',
+      unstuckPortal:'Débloqué: Town Portal vous a ramené en ville.',
+      renamerPrompt:'Entrez votre nouveau pseudo (3-18 caractères). Coût: 10000 or.',
+      renamerTooPoor:'Il faut 10000 or pour renommer.',
+      renamerInvalid:'Pseudo invalide. Utilisez 3-18 caractères (lettres, chiffres, espace, _ -).',
+      renamerBad:'Pseudo refusé par le filtre de contenu.',
+      renamedOk:'Pseudo mis à jour.',
+      actionRenamer:'Action: Renommeur',
     },
   };
   const tr=(k)=> (I18N[state.lang]&&I18N[state.lang][k]) || (I18N.en[k]||k);
@@ -965,6 +992,29 @@
   function tileAt(x,y){ if(!state.map||x<0||y<0||y>=state.map.length||x>=state.map[0].length) return 1; return state.map[y][x]; }
   const passable=(x,y)=>tileAt(x,y)!==1;
   const spawnSafe=(x,y)=>passable(x,y) && tileAt(x,y)!==11;
+  function relocateToNearestSafe(wx, wy){
+    const x0 = Math.floor(Number(wx||0));
+    const y0 = Math.floor(Number(wy||0));
+    if(spawnSafe(x0, y0)){ state.player.x = x0 + 0.5; state.player.y = y0 + 0.5; return true; }
+    const w = Array.isArray(state.map?.[0]) ? state.map[0].length : 0;
+    const h = Array.isArray(state.map) ? state.map.length : 0;
+    const maxR = Math.max(6, Math.min(32, Math.max(w, h)));
+    for(let r=1; r<=maxR; r++){
+      for(let yy=y0-r; yy<=y0+r; yy++){
+        for(let xx=x0-r; xx<=x0+r; xx++){
+          if(Math.abs(xx-x0)!==r && Math.abs(yy-y0)!==r) continue;
+          if(spawnSafe(xx,yy)){ state.player.x = xx + 0.5; state.player.y = yy + 0.5; return true; }
+        }
+      }
+    }
+    return false;
+  }
+  function ensurePlayerSafePosition(){
+    const tx = Math.floor(Number(state.player.x||0));
+    const ty = Math.floor(Number(state.player.y||0));
+    if(spawnSafe(tx,ty)) return true;
+    return relocateToNearestSafe(tx,ty);
+  }
   function findTile(map, t){
     if(!Array.isArray(map) || !map.length) return null;
     for(let y=0;y<map.length;y++){
@@ -1012,9 +1062,10 @@
 
   function genDungeon(floor){
     const f = Math.max(1, Number(floor||1));
-    const grow = Math.max(0, f - 10);
-    const w = 54 + Math.min(22, Math.floor(grow * 1.4));
-    const h = 54 + Math.min(22, Math.floor(grow * 1.4));
+    const grow = Math.max(0, f - 8);
+    const bonus = f >= 21 ? Math.floor((f - 20) * 0.7) : 0;
+    const w = 54 + Math.min(32, Math.floor(grow * 1.4) + bonus);
+    const h = 54 + Math.min(32, Math.floor(grow * 1.4) + bonus);
     const m=[];
     for(let y=0;y<h;y++){ const r=[]; for(let x=0;x<w;x++){ let t=(x===0||y===0||x===w-1||y===h-1)?1:(Math.random()<0.08?1:6); if(Math.random()<0.01) t=7; r.push(t);} m.push(r); }
     const upX = clamp(6 + rng(Math.max(8, Math.floor(w*0.28))), 5, w-6);
@@ -1057,6 +1108,7 @@
     }
     m[upY][upX]=8;
     m[downY][downX]=9;
+    let portalPos = null;
     if(Number(floor||0) > 0 && Number(floor||0) % 5 === 0){
       let pX = clamp(6 + rng(w-12), 5, w-6);
       let pY = clamp(6 + rng(h-12), 5, h-6);
@@ -1071,18 +1123,27 @@
         m[ty][tx] = 6;
       }
       m[pY][pX] = 10; // town portal return tile on checkpoint floors
+      portalPos = {x:pX,y:pY};
     }
     if(f >= 11){
+      const nearSpecial = (x,y) => {
+        if(Math.abs(x-upX) <= 3 && Math.abs(y-upY) <= 3) return true;
+        if(Math.abs(x-downX) <= 3 && Math.abs(y-downY) <= 3) return true;
+        if(portalPos && Math.abs(x-portalPos.x) <= 3 && Math.abs(y-portalPos.y) <= 3) return true;
+        return false;
+      };
       const lavaPatches = Math.min(8 + Math.floor((f-10)/2), 22);
       for(let i=0;i<lavaPatches;i++){
         const cx = clamp(5 + rng(w-10), 2, w-3);
         const cy = clamp(5 + rng(h-10), 2, h-3);
+        if(nearSpecial(cx,cy)) continue;
         const radius = 1 + rng(2);
         for(let yy=-radius; yy<=radius; yy++){
           for(let xx=-radius; xx<=radius; xx++){
             const tx = cx + xx, ty = cy + yy;
             if(tx<=1 || ty<=1 || tx>=w-2 || ty>=h-2) continue;
             if(m[ty][tx]!==6) continue;
+            if(nearSpecial(tx,ty)) continue;
             if(Math.random() < 0.45) m[ty][tx] = 11;
           }
         }
@@ -1112,8 +1173,14 @@
           kind = 'titan';
           hp = Math.floor(base * 12.6);
           atk += 20 + Math.floor(state.floor * 1.15);
-          xp = Math.floor(xp * 7.8);
+          xp = Math.max(Math.floor(xp * 7.8), 220 + Math.floor(state.floor * 18));
           gold += 95 + rng(120);
+        } else if(Number(state.floor||1) >= 21 && Math.random() < 0.18){
+          kind = 'archon';
+          hp = Math.floor(base * 7.4);
+          atk += 15 + Math.floor(state.floor * 0.95);
+          xp = Math.max(Math.floor(xp * 4.9), 160 + Math.floor(state.floor * 12));
+          gold += 60 + rng(85);
         } else if(tier >= 2 && Math.random() < 0.5){
           kind = 'dragon';
           hp = Math.floor(base * 4.6);
@@ -1197,6 +1264,12 @@
         name_fr:'Portail Arcanique',name_en:'Arcane Gatekeeper',
         line_fr:'Je peux te renvoyer vers tes checkpoints 5/10/15...',
         line_en:'I can send you back to your 5/10/15 checkpoints.',
+      });
+      state.npcs.push({
+        id:'renamer',x:24.5,y:57.5,role:'renamer',
+        name_fr:'Le Renommeur',name_en:'The Renamer',
+        line_fr:'Je peux changer ton pseudo pour 10000 or.',
+        line_en:'I can rename you for 10000 gold.',
       });
       state.npcs.push({
         id:'guard',x:49.5,y:42.5,homeX:49.5,homeY:42.5,role:'guard',cd:0,swingUntil:0,swingDir:0,patrolX:49.5,patrolY:42.5,patrolT:0,
@@ -1727,6 +1800,7 @@
         ['Potion HP','Potion HP++','Épée de garde','Bouclier renforcé','Anneau d\'acier'],
         ['Potion HP++','Lame runique','Bouclier runique','Armure du gardien','Anneau runique'],
         ['Potion HP++','Épée draconique','Égide antique','Armure de dragon','Anneau du phénix'],
+        ['Potion HP++','Potion HP+++','Claymore abyssale','Rempart céleste','Bottes astrales','Armure du titan','Anneau du vide'],
       ];
       const pool = pools[Math.min(t, pools.length-1)];
       const itemName=pool[rng(pool.length)];
@@ -1799,7 +1873,12 @@
 
   function updateContextAction(){
     const npc=nearestNPC(1.45), tp=nearestTeleporter(1.6), door=nearbyDoor(), enemy=nearestEnemy(2);
-    if(npc) state.ctxAction={type:npc.role==='merchant'?'merchant':(npc.role==='teleporter'?'teleport':'talk'),target:npc,label:npc.role==='merchant'?'SHOP':(npc.role==='teleporter'?'PORTAL':'TALK'),hint:npc.role==='merchant'?tr('actionMerchant'):(npc.role==='teleporter'?tr('actionTeleporter'):tr('actionTalk'))};
+    if(npc){
+      const typ = npc.role==='merchant' ? 'merchant' : (npc.role==='teleporter' ? 'teleport' : (npc.role==='renamer' ? 'renamer' : 'talk'));
+      const lbl = npc.role==='merchant' ? 'SHOP' : (npc.role==='teleporter' ? 'PORTAL' : (npc.role==='renamer' ? 'NAME' : 'TALK'));
+      const hint = npc.role==='merchant' ? tr('actionMerchant') : (npc.role==='teleporter' ? tr('actionTeleporter') : (npc.role==='renamer' ? tr('actionRenamer') : tr('actionTalk')));
+      state.ctxAction={type:typ,target:npc,label:lbl,hint};
+    }
     else if(tp) state.ctxAction={type:'teleport',target:tp,label:'PORTAL',hint:tr('actionTeleporter')};
     else if(door) state.ctxAction={type:'enter',target:door,label:'ENTER',hint:tr('actionEnter')};
     else if(enemy) state.ctxAction={type:'attack',target:enemy,label:'ATK',hint:tr('actionAttack')};
@@ -1833,6 +1912,7 @@
       return;
     }
     if(a.type==='merchant'&&a.target){ showDialog(`${npcName(a.target)}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); setTab('shop'); panel.classList.add('open'); return; }
+    if(a.type==='renamer'&&a.target){ requestRename(); return; }
     if(a.type==='teleport'&&a.target){ openTeleportModal(); return; }
     if(a.type==='enter'&&a.target){ doEnter(a.target); return; }
     attack(state.player.swingDir||0);
@@ -1947,6 +2027,15 @@
   function startTownPortalCast(){
     if(state.dead || state.sessionConflict) return;
     if(state.portalCast.active) return;
+    state.clickTarget = null;
+    state.keys.w = state.keys.a = state.keys.s = state.keys.d = false;
+    const tx = Math.floor(Number(state.player.x||0));
+    const ty = Math.floor(Number(state.player.y||0));
+    if(!passable(tx,ty)){
+      completeTownPortal();
+      showDialog(tr('unstuckPortal'));
+      return;
+    }
     const now = performance.now();
     state.portalCast.active = true;
     state.portalCast.startedAt = now;
@@ -2207,6 +2296,49 @@
       await refreshChat();
     } catch {}
   }
+  async function requestRename(){
+    if(!state.auth.logged){
+      showDialog(state.lang==='fr' ? 'Connectez-vous avec Google pour renommer.' : 'Login with Google to rename.');
+      return;
+    }
+    if(Number(state.player.gold||0) < 10000){
+      showDialog(tr('renamerTooPoor'));
+      return;
+    }
+    const raw = window.prompt(tr('renamerPrompt'), String(state.auth.name || '').slice(0, 18));
+    if(raw === null) return;
+    const name = String(raw || '').trim().replace(/\s+/g, ' ');
+    if(!/^[A-Za-zÀ-ÖØ-öø-ÿ0-9 _-]{3,18}$/.test(name)){
+      showDialog(tr('renamerInvalid'));
+      return;
+    }
+    try{
+      const r = await fetch('/api/game/profile/name', {
+        method:'POST',
+        credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name, cost:10000}),
+      });
+      const d = await r.json().catch(()=>({}));
+      if(!d?.ok){
+        if(d?.reason === 'bad_name'){ showDialog(tr('renamerBad')); return; }
+        if(d?.reason === 'not_enough_gold'){ showDialog(tr('renamerTooPoor')); return; }
+        showDialog(state.lang==='fr' ? 'Renommage échoué.' : 'Rename failed.');
+        return;
+      }
+      state.player.gold = Math.max(0, Number(state.player.gold||0) - 10000);
+      state.auth.name = String(d.display_name || name);
+      refreshAuthUi();
+      showDialog(tr('renamedOk'));
+      log(`✏️ ${tr('renamedOk')}: ${state.auth.name}`);
+      await save();
+      await updatePresence();
+      await refreshPresence();
+      await refreshLeaderboard();
+    }catch{
+      showDialog(state.lang==='fr' ? 'Renommage échoué.' : 'Rename failed.');
+    }
+  }
 
   function setTab(name){
     state.activeTab = String(name||'gear');
@@ -2278,6 +2410,12 @@
       state.clickTarget = null;
       if(state.portalCast.active) interruptTownPortal('move');
     }
+    if(!ensurePlayerSafePosition() && state.zone==='dungeon'){
+      if(state.portalCast.active) state.portalCast.active = false;
+      completeTownPortal();
+      showDialog(tr('unstuckPortal'));
+      return;
+    }
 
     if(!vx&&!vy&&state.clickTarget){ const dx=state.clickTarget.x-state.player.x, dy=state.clickTarget.y-state.player.y, d=Math.hypot(dx,dy); if(d<0.15) state.clickTarget=null; else {vx=dx/d; vy=dy/d;} }
     if(state.teleportOpen){
@@ -2286,7 +2424,6 @@
     }
 
     if(vx||vy){
-      if(state.portalCast.active) interruptTownPortal('move');
       if(Math.abs(vx)>Math.abs(vy)) state.player.facing=vx<0?'left':'right'; else state.player.facing=vy<0?'up':'down';
       state.player.swingDir=Math.atan2(vy,vx);
       const l=Math.hypot(vx,vy)||1; vx/=l; vy/=l;
@@ -2419,7 +2556,7 @@
       }
       state.enemies=state.enemies.filter(e=>Number.isFinite(e.hp)&&e.hp>0);
     }
-    if(state.zone !== 'dungeon'){
+    if(state.zone === 'dungeon'){
       maybeRespawnEnemies(dt);
     }
 
@@ -2600,6 +2737,15 @@
     if(Number.isFinite(sx) && Number.isFinite(sy)){
       state.player.x = sx;
       state.player.y = sy;
+      if(!ensurePlayerSafePosition()){
+        if(state.zone==='dungeon'){
+          const up = findTile(state.map, 8);
+          spawnNearTile(up || findTile(state.map, 9) || findTile(state.map, 10));
+        } else {
+          state.player.x = 41;
+          state.player.y = 42;
+        }
+      }
     }
     return true;
   }
@@ -2690,6 +2836,22 @@
     e.preventDefault(); tryAutoFullscreen();
     if(state.dead || state.sessionConflict) return;
     const w=screenPointerToWorld(e);
+    const tappedNpc = state.npcs.find(n => dist(Number(n.x||0), Number(n.y||0), w.x, w.y) < 0.95);
+    if(tappedNpc && dist(Number(tappedNpc.x||0), Number(tappedNpc.y||0), state.player.x, state.player.y) < 1.7){
+      const role = String(tappedNpc.role||'');
+      if(role === 'merchant'){ setTab('shop'); panel.classList.add('open'); showDialog(`${npcName(tappedNpc)}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); return; }
+      if(role === 'elder'){
+        const prev = Number(state.player.hp||0);
+        state.player.hp = Number(state.player.hpMax||state.player.hp||100);
+        if(state.player.hp > prev) log(`✨ ${tr('elderHeal')}`);
+        showDialog(`${npcName(tappedNpc)}: ${npcLine(tappedNpc)}`);
+        return;
+      }
+      if(role === 'renamer'){ requestRename(); return; }
+      if(role === 'teleporter'){ openTeleportModal(); return; }
+      showDialog(`${npcName(tappedNpc)}: ${npcLine(tappedNpc)}`);
+      return;
+    }
     const tx=Math.floor(w.x), ty=Math.floor(w.y), t=tileAt(tx,ty);
     if((t===5||t===8||t===9||t===10) && dist(w.x,w.y,state.player.x,state.player.y)<2.2){ doEnter({x:tx,y:ty,t}); return; }
     const dx=w.x-state.player.x, dy=w.y-state.player.y;
@@ -2858,47 +3020,6 @@
   chatTicker?.addEventListener('click',()=>{
     openChatPanel();
   });
-
-  function updateContextAction(){
-    const npc=nearestNPC(1.45), tp=nearestTeleporter(1.6), door=nearbyDoor(), enemy=nearestEnemy(2);
-    if(npc) state.ctxAction={type:npc.role==='merchant'?'merchant':(npc.role==='teleporter'?'teleport':'talk'),target:npc,label:npc.role==='merchant'?'SHOP':(npc.role==='teleporter'?'PORTAL':'TALK'),hint:npc.role==='merchant'?tr('actionMerchant'):(npc.role==='teleporter'?tr('actionTeleporter'):tr('actionTalk'))};
-    else if(tp) state.ctxAction={type:'teleport',target:tp,label:'PORTAL',hint:tr('actionTeleporter')};
-    else if(door) state.ctxAction={type:'enter',target:door,label:'ENTER',hint:tr('actionEnter')};
-    else if(enemy) state.ctxAction={type:'attack',target:enemy,label:'ATK',hint:tr('actionAttack')};
-    else state.ctxAction={type:'attack',target:null,label:'ATK',hint:tr('actionAttack')};
-    document.getElementById('actionBtn').textContent=state.ctxAction.label;
-    document.getElementById('actionHint').textContent=state.ctxAction.hint;
-  }
-
-  function doAction(){
-    if(state.sessionConflict) return;
-    const a=state.ctxAction;
-    if(a.type==='talk'&&a.target){
-      showDialog(`${npcName(a.target)}: ${npcLine(a.target)}`);
-      log(`💬 ${npcName(a.target)}`);
-      if(a.target.id==='elder'){
-        const prev = Number(state.player.hp||0);
-        state.player.hp = Number(state.player.hpMax||state.player.hp||100);
-        if(state.player.hp > prev){
-          log(`✨ ${tr('elderHeal')}`);
-        }
-      }
-      return;
-    }
-    if(a.type==='merchant'&&a.target){ showDialog(`${npcName(a.target)}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); setTab('shop'); panel.classList.add('open'); return; }
-    if(a.type==='teleport'&&a.target){ openTeleportModal(); return; }
-    if(a.type==='enter'&&a.target){ doEnter(a.target); return; }
-    attack(state.player.swingDir||0);
-  }
-
-  function doEnter(door){
-    if(!door) return;
-    if(state.zone==='village'&&door.t===5){ switchZone('dungeon',1,'from_shallow'); return; }
-    if(state.zone==='village'&&door.t===10){ openTeleportModal(); return; }
-    if(state.zone==='dungeon'&&door.t===10){ switchZone('village',0); return; }
-    if(state.zone==='dungeon'&&door.t===9){ switchZone('dungeon',state.floor+1,'from_shallow'); return; }
-    if(state.zone==='dungeon'&&door.t===8){ if(state.floor<=1) switchZone('village',0); else switchZone('dungeon',state.floor-1,'from_deeper'); return; }
-  }
 
   async function boot(){
     ensureQuests(); recalcStats(); updateViewMetrics();
