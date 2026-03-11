@@ -30,6 +30,16 @@ GAME_BAD_WORDS = {
     'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'cunt',
     'tabarnak', 'osti', 'calisse', 'criss', 'encule', 'enculé', 'pute', 'salope', 'merde',
 }
+BLOG_ARTICLE_FILES = {
+    'meilleurs-jeux-browser-2026': 'game-blog-a1.html',
+    'browserquest-online-guide-complet': 'game-blog-a2.html',
+    'browserquest-online-mobile-vs-pc': 'game-blog-a3.html',
+    'progression-floor-1-a-20-browserquest': 'game-blog-a4.html',
+    'floor-21-plus-endgame-browserquest': 'game-blog-a5.html',
+    'objets-raretes-et-loot-browserquest': 'game-blog-a6.html',
+    'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
+    'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
+}
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -665,6 +675,18 @@ def game_wiki_page():
 @app.get('/wiki/blog')
 def game_blog_page():
     return FileResponse(str(STATIC_DIR / 'game-blog.html'))
+
+
+@app.get('/wiki/blog/{slug}')
+def game_blog_article_page(slug: str):
+    s = re.sub(r'[^a-z0-9-]', '', str(slug or '').lower())[:120]
+    fname = BLOG_ARTICLE_FILES.get(s)
+    if not fname:
+        raise HTTPException(status_code=404, detail='article not found')
+    path = STATIC_DIR / fname
+    if not path.exists():
+        raise HTTPException(status_code=404, detail='article file missing')
+    return FileResponse(str(path))
 
 
 @app.get('/sitemap.xml')
