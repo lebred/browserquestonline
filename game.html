@@ -1870,6 +1870,37 @@
     return null;
   }
   function nearestEnemy(maxD=2){ let best=null,b=999; for(const e of state.enemies){ const d=dist(e.x,e.y,state.player.x,state.player.y); if(d<maxD&&d<b){b=d;best=e;} } return best; }
+  function interactWithNpc(npc){
+    if(!npc) return false;
+    const role = String(npc.role||'');
+    if(role === 'merchant'){
+      showDialog(`${npcName(npc)}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`);
+      setTab('shop');
+      panel.classList.add('open');
+      renderPanels();
+      return true;
+    }
+    if(role === 'elder'){
+      const prev = Number(state.player.hp||0);
+      state.player.hp = Number(state.player.hpMax||state.player.hp||100);
+      showDialog(`${npcName(npc)}: ${npcLine(npc)}`);
+      if(state.player.hp > prev){
+        log(`✨ ${tr('elderHeal')}`);
+      }
+      return true;
+    }
+    if(role === 'renamer'){
+      requestRename();
+      return true;
+    }
+    if(role === 'teleporter'){
+      openTeleportModal();
+      return true;
+    }
+    showDialog(`${npcName(npc)}: ${npcLine(npc)}`);
+    log(`💬 ${npcName(npc)}`);
+    return true;
+  }
 
   function updateContextAction(){
     const npc=nearestNPC(1.45), tp=nearestTeleporter(1.6), door=nearbyDoor(), enemy=nearestEnemy(2);
@@ -1899,21 +1930,9 @@
   function doAction(){
     if(state.sessionConflict) return;
     const a=state.ctxAction;
-    if(a.type==='talk'&&a.target){
-      showDialog(`${npcName(a.target)}: ${npcLine(a.target)}`);
-      log(`💬 ${npcName(a.target)}`);
-      if(a.target.id==='elder'){
-        const prev = Number(state.player.hp||0);
-        state.player.hp = Number(state.player.hpMax||state.player.hp||100);
-        if(state.player.hp > prev){
-          log(`✨ ${tr('elderHeal')}`);
-        }
-      }
-      return;
+    if((a.type==='talk' || a.type==='merchant' || a.type==='renamer' || a.type==='teleport') && a.target){
+      if(interactWithNpc(a.target)) return;
     }
-    if(a.type==='merchant'&&a.target){ showDialog(`${npcName(a.target)}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); setTab('shop'); panel.classList.add('open'); return; }
-    if(a.type==='renamer'&&a.target){ requestRename(); return; }
-    if(a.type==='teleport'&&a.target){ openTeleportModal(); return; }
     if(a.type==='enter'&&a.target){ doEnter(a.target); return; }
     attack(state.player.swingDir||0);
   }
@@ -2836,21 +2855,16 @@
     e.preventDefault(); tryAutoFullscreen();
     if(state.dead || state.sessionConflict) return;
     const w=screenPointerToWorld(e);
-    const tappedNpc = state.npcs.find(n => dist(Number(n.x||0), Number(n.y||0), w.x, w.y) < 0.95);
-    if(tappedNpc && dist(Number(tappedNpc.x||0), Number(tappedNpc.y||0), state.player.x, state.player.y) < 1.7){
-      const role = String(tappedNpc.role||'');
-      if(role === 'merchant'){ setTab('shop'); panel.classList.add('open'); showDialog(`${npcName(tappedNpc)}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`); return; }
-      if(role === 'elder'){
-        const prev = Number(state.player.hp||0);
-        state.player.hp = Number(state.player.hpMax||state.player.hp||100);
-        if(state.player.hp > prev) log(`✨ ${tr('elderHeal')}`);
-        showDialog(`${npcName(tappedNpc)}: ${npcLine(tappedNpc)}`);
-        return;
+    let tappedNpc = null, bestNpcD = 999;
+    for(const n of state.npcs){
+      const dTap = dist(Number(n.x||0), Number(n.y||0), w.x, w.y);
+      if(dTap < 1.25 && dTap < bestNpcD){ bestNpcD = dTap; tappedNpc = n; }
+    }
+    if(tappedNpc){
+      const dPlayer = dist(Number(tappedNpc.x||0), Number(tappedNpc.y||0), state.player.x, state.player.y);
+      if(dPlayer <= 2.25){
+        if(interactWithNpc(tappedNpc)) return;
       }
-      if(role === 'renamer'){ requestRename(); return; }
-      if(role === 'teleporter'){ openTeleportModal(); return; }
-      showDialog(`${npcName(tappedNpc)}: ${npcLine(tappedNpc)}`);
-      return;
     }
     const tx=Math.floor(w.x), ty=Math.floor(w.y), t=tileAt(tx,ty);
     if((t===5||t===8||t===9||t===10) && dist(w.x,w.y,state.player.x,state.player.y)<2.2){ doEnter({x:tx,y:ty,t}); return; }
