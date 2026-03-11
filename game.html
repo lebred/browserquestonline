@@ -536,7 +536,7 @@
     onlineTotal:1,
     activeTab:'gear',
     chatMessages:[],
-    enemies:[],enemyProjectiles:[],npcs:[],clickTarget:null,keys:{w:false,a:false,s:false,d:false},particles:[],lootTexts:[],logs:[],
+    enemies:[],enemyProjectiles:[],npcs:[],clickTarget:null,pendingNpcInteract:null,keys:{w:false,a:false,s:false,d:false},particles:[],lootTexts:[],logs:[],
     enemyRespawnTick:0,
     lavaTick:0,
     hurtFlash:0,
@@ -967,6 +967,7 @@
     state.teleportOpen = false;
     state.portalCast = {active:false,startedAt:0,endAt:0};
     state.clickTarget = null;
+    state.pendingNpcInteract = null;
     state.player = {x:12,y:10,hp:100,hpMax:100,atkBase:8,defBase:2,atk:8,def:2,moveSpeed:1,lvl:1,xp:0,xpNeed:40,gold:0,lastAtk:0,swingUntil:0,swingDir:0,facing:'down',attackAt:0};
     state.equipped = {weapon:null,shield:null,armor:null,boots:null,ring:null};
     state.inv = [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
@@ -1266,7 +1267,7 @@
         line_en:'I can send you back to your 5/10/15 checkpoints.',
       });
       state.npcs.push({
-        id:'renamer',x:24.5,y:57.5,role:'renamer',
+        id:'renamer',x:34.5,y:41.5,role:'renamer',
         name_fr:'Le Renommeur',name_en:'The Renamer',
         line_fr:'Je peux changer ton pseudo pour 10000 or.',
         line_en:'I can rename you for 10000 gold.',
@@ -1285,7 +1286,7 @@
   function switchZone(zone,floor=0,entry='default'){
     const prevZone = state.zone;
     const prevFloor = Number(state.floor || 0);
-    state.zone=zone; state.floor=floor; state.clickTarget=null;
+    state.zone=zone; state.floor=floor; state.clickTarget=null; state.pendingNpcInteract=null;
     state.map = zone==='village'?genVillage():genDungeon(floor);
     if(zone==='village'){
       state.player.x=41;
@@ -1770,6 +1771,17 @@
     if(typeof dirAngle==='number'&&Number.isFinite(dirAngle)) state.player.swingDir=dirAngle;
     spawnSlashParticles();
 
+    // NPC interaction fallback: swinging near healer/merchant/etc triggers interaction
+    // even if tap-targeting missed due to mobile precision.
+    const npcCloseRange = state.zone === 'village' ? 4.6 : 2.1;
+    const npcClose = nearestNPC(npcCloseRange);
+    if(npcClose){
+      state.clickTarget = null;
+      state.pendingNpcInteract = null;
+      interactWithNpc(npcClose);
+      return;
+    }
+
     let hits=0;
     for(const e of state.enemies){
       if(!Number.isFinite(e.hp)) e.hp=1;
@@ -1855,7 +1867,19 @@
     return true;
   }
 
-  function nearestNPC(maxD=1.5){ let best=null,b=999; for(const n of state.npcs){ const d=dist(n.x,n.y,state.player.x,state.player.y); if(d<maxD&&d<b){b=d;best=n;} } return best; }
+  function isInteractiveNpc(n){
+    const r = String((n && n.role) || '');
+    return r === 'elder' || r === 'merchant' || r === 'teleporter' || r === 'renamer';
+  }
+  function nearestNPC(maxD=1.5, includeGuards=false){
+    let best=null,b=999;
+    for(const n of state.npcs){
+      if(!includeGuards && !isInteractiveNpc(n)) continue;
+      const d=dist(n.x,n.y,state.player.x,state.player.y);
+      if(d<maxD&&d<b){b=d;best=n;}
+    }
+    return best;
+  }
   function isNearRole(role,maxD=1.5){ return state.npcs.some(n=>n.role===role && dist(n.x,n.y,state.player.x,state.player.y)<maxD); }
   function nearbyDoor(){
     const x=Math.floor(state.player.x), y=Math.floor(state.player.y), around=[[x,y],[x+1,y],[x-1,y],[x,y+1],[x,y-1]];
@@ -1870,6 +1894,17 @@
     return null;
   }
   function nearestEnemy(maxD=2){ let best=null,b=999; for(const e of state.enemies){ const d=dist(e.x,e.y,state.player.x,state.player.y); if(d<maxD&&d<b){b=d;best=e;} } return best; }
+  function queueNpcInteraction(npc){
+    if(!npc || !isInteractiveNpc(npc)) return;
+    state.pendingNpcInteract = {
+      id: String(npc.id || ''),
+      role: String(npc.role || ''),
+      x: Number(npc.x || 0),
+      y: Number(npc.y || 0),
+      expires: Date.now() + 3200,
+    };
+    state.clickTarget = { x: Number(npc.x||0), y: Number(npc.y||0) };
+  }
   function interactWithNpc(npc){
     if(!npc) return false;
     const role = String(npc.role||'');
@@ -2427,6 +2462,7 @@
     const manualMoveInput = !!(state.keys.w || state.keys.a || state.keys.s || state.keys.d);
     if(manualMoveInput){
       state.clickTarget = null;
+      state.pendingNpcInteract = null;
       if(state.portalCast.active) interruptTownPortal('move');
     }
     if(!ensurePlayerSafePosition() && state.zone==='dungeon'){
@@ -2450,6 +2486,20 @@
       const nx=state.player.x+vx*speed, ny=state.player.y+vy*speed;
       if(passable(Math.floor(nx),Math.floor(state.player.y))) state.player.x=nx;
       if(passable(Math.floor(state.player.x),Math.floor(ny))) state.player.y=ny;
+    }
+    if(state.pendingNpcInteract){
+      const wait = state.pendingNpcInteract;
+      const still = state.npcs.find(n=>String(n.id||'')===wait.id) || state.npcs.find(n=>String(n.role||'')===wait.role && dist(Number(n.x||0),Number(n.y||0),wait.x,wait.y)<1.2);
+      if(!still || Date.now() > Number(wait.expires||0)){
+        state.pendingNpcInteract = null;
+      } else {
+        const dToNpc = dist(Number(still.x||0), Number(still.y||0), state.player.x, state.player.y);
+        if(dToNpc <= 1.7){
+          state.pendingNpcInteract = null;
+          state.clickTarget = null;
+          interactWithNpc(still);
+        }
+      }
     }
     const standingTile = tileAt(Math.floor(state.player.x), Math.floor(state.player.y));
     if(standingTile===11){
@@ -2857,17 +2907,25 @@
     const w=screenPointerToWorld(e);
     let tappedNpc = null, bestNpcD = 999;
     for(const n of state.npcs){
+      if(!isInteractiveNpc(n)) continue;
       const dTap = dist(Number(n.x||0), Number(n.y||0), w.x, w.y);
-      if(dTap < 2.1 && dTap < bestNpcD){ bestNpcD = dTap; tappedNpc = n; }
+      if(dTap < 2.6 && dTap < bestNpcD){ bestNpcD = dTap; tappedNpc = n; }
     }
-    const nearbyNpc = nearestNPC(2.9);
+    const nearbyNpc = nearestNPC(4.2);
     if(tappedNpc){
       const dPlayer = dist(Number(tappedNpc.x||0), Number(tappedNpc.y||0), state.player.x, state.player.y);
-      if(dPlayer <= 2.9 && interactWithNpc(tappedNpc)) return;
+      if(dPlayer <= 1.9 && interactWithNpc(tappedNpc)) return;
+      queueNpcInteraction(tappedNpc);
+      return;
     }
     if(nearbyNpc){
       const dTapNear = dist(Number(nearbyNpc.x||0), Number(nearbyNpc.y||0), w.x, w.y);
-      if(dTapNear <= 2.7 && interactWithNpc(nearbyNpc)) return;
+      if(dTapNear <= 1.35){
+        const dNear = dist(Number(nearbyNpc.x||0), Number(nearbyNpc.y||0), state.player.x, state.player.y);
+        if(dNear <= 1.9 && interactWithNpc(nearbyNpc)) return;
+        queueNpcInteraction(nearbyNpc);
+        return;
+      }
     }
     const tx=Math.floor(w.x), ty=Math.floor(w.y), t=tileAt(tx,ty);
     if((t===5||t===8||t===9||t===10) && dist(w.x,w.y,state.player.x,state.player.y)<2.2){ doEnter({x:tx,y:ty,t}); return; }
