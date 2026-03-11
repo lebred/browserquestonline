@@ -18,7 +18,7 @@
     .btn{border:1px solid #3e63a0;background:var(--btn2);color:#ecf3ff;padding:6px 8px;border-radius:10px;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:12px}
     .btn.primary{background:linear-gradient(180deg,#2f6cd0,#2256ae)}
 
-    .status{position:absolute;top:44px;left:6px;z-index:19;padding:6px 8px;background:var(--glass);min-width:200px;max-width:min(90vw,300px)}
+    .status{position:absolute;top:44px;left:6px;z-index:19;padding:6px 8px;background:var(--glass);min-width:200px;max-width:min(90vw,300px);pointer-events:none}
     .k{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
     .v{font-weight:800}
     .row{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
@@ -2858,13 +2858,16 @@
     let tappedNpc = null, bestNpcD = 999;
     for(const n of state.npcs){
       const dTap = dist(Number(n.x||0), Number(n.y||0), w.x, w.y);
-      if(dTap < 1.25 && dTap < bestNpcD){ bestNpcD = dTap; tappedNpc = n; }
+      if(dTap < 2.1 && dTap < bestNpcD){ bestNpcD = dTap; tappedNpc = n; }
     }
+    const nearbyNpc = nearestNPC(2.9);
     if(tappedNpc){
       const dPlayer = dist(Number(tappedNpc.x||0), Number(tappedNpc.y||0), state.player.x, state.player.y);
-      if(dPlayer <= 2.25){
-        if(interactWithNpc(tappedNpc)) return;
-      }
+      if(dPlayer <= 2.9 && interactWithNpc(tappedNpc)) return;
+    }
+    if(nearbyNpc){
+      const dTapNear = dist(Number(nearbyNpc.x||0), Number(nearbyNpc.y||0), w.x, w.y);
+      if(dTapNear <= 2.7 && interactWithNpc(nearbyNpc)) return;
     }
     const tx=Math.floor(w.x), ty=Math.floor(w.y), t=tileAt(tx,ty);
     if((t===5||t===8||t===9||t===10) && dist(w.x,w.y,state.player.x,state.player.y)<2.2){ doEnter({x:tx,y:ty,t}); return; }
