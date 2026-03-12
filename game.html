@@ -555,7 +555,7 @@
     onlineTotal:1,
     activeTab:'gear',
     chatMessages:[],
-    enemies:[],enemyProjectiles:[],npcs:[],clickTarget:null,pendingNpcInteract:null,keys:{w:false,a:false,s:false,d:false},particles:[],lootTexts:[],logs:[],
+    enemies:[],enemyProjectiles:[],npcs:[],clickTarget:null,pendingNpcInteract:null,npcProximityLock:{},portalProxLatched:false,keys:{w:false,a:false,s:false,d:false},particles:[],lootTexts:[],logs:[],
     enemyRespawnTick:0,
     lavaTick:0,
     hurtFlash:0,
@@ -1000,6 +1000,8 @@
     state.portalCast = {active:false,startedAt:0,endAt:0};
     state.clickTarget = null;
     state.pendingNpcInteract = null;
+    state.npcProximityLock = {};
+    state.portalProxLatched = false;
     state.player = {x:12,y:10,hp:100,hpMax:100,atkBase:8,defBase:2,atk:8,def:2,moveSpeed:1,lvl:1,xp:0,xpNeed:40,gold:0,lastAtk:0,swingUntil:0,swingDir:0,facing:'down',attackAt:0};
     state.equipped = {weapon:null,shield:null,armor:null,boots:null,ring:null};
     state.inv = [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
@@ -1299,7 +1301,7 @@
         line_en:'I can send you back to your 5/10/15 checkpoints.',
       });
       state.npcs.push({
-        id:'renamer',x:34.5,y:41.5,role:'renamer',
+        id:'renamer',x:24.5,y:55.5,role:'renamer',
         name_fr:'Le Renommeur',name_en:'The Renamer',
         line_fr:'Je peux changer ton pseudo pour 10000 or.',
         line_en:'I can rename you for 10000 gold.',
@@ -1318,7 +1320,7 @@
   function switchZone(zone,floor=0,entry='default'){
     const prevZone = state.zone;
     const prevFloor = Number(state.floor || 0);
-    state.zone=zone; state.floor=floor; state.clickTarget=null; state.pendingNpcInteract=null;
+    state.zone=zone; state.floor=floor; state.clickTarget=null; state.pendingNpcInteract=null; state.npcProximityLock={}; state.portalProxLatched=false;
     state.map = zone==='village'?genVillage():genDungeon(floor);
     if(zone==='village'){
       state.player.x=41;
@@ -1922,6 +1924,29 @@
     return null;
   }
   function nearestEnemy(maxD=2){ let best=null,b=999; for(const e of state.enemies){ const d=dist(e.x,e.y,state.player.x,state.player.y); if(d<maxD&&d<b){b=d;best=e;} } return best; }
+  function isNpcProximityLocked(npc){
+    const id = String(npc?.id || '');
+    if(!id) return false;
+    return !!(state.npcProximityLock && state.npcProximityLock[id]);
+  }
+  function lockNpcProximity(npc){
+    const id = String(npc?.id || '');
+    if(!id) return;
+    if(!state.npcProximityLock || typeof state.npcProximityLock !== 'object') state.npcProximityLock = {};
+    state.npcProximityLock[id] = true;
+  }
+  function releaseNpcProximityLocks(){
+    if(!state.npcProximityLock || typeof state.npcProximityLock !== 'object') return;
+    const releaseD = 2.35;
+    for(const n of state.npcs){
+      if(!isInteractiveNpc(n)) continue;
+      const id = String(n.id || '');
+      if(!id || !state.npcProximityLock[id]) continue;
+      if(dist(Number(n.x||0), Number(n.y||0), state.player.x, state.player.y) > releaseD){
+        delete state.npcProximityLock[id];
+      }
+    }
+  }
   function queueNpcInteraction(npc){
     if(!npc || !isInteractiveNpc(npc)) return;
     state.pendingNpcInteract = {
@@ -1933,8 +1958,10 @@
     };
     state.clickTarget = { x: Number(npc.x||0), y: Number(npc.y||0) };
   }
-  function interactWithNpc(npc){
+  function interactWithNpc(npc, opts={}){
     if(!npc) return false;
+    const byProximity = !!opts.byProximity;
+    if(byProximity) lockNpcProximity(npc);
     const role = String(npc.role||'');
     if(role === 'merchant'){
       showDialog(`${npcName(npc)}: ${state.lang==='fr'?'Ouvre le panel du marchand.':'Open the merchant panel.'}`);
@@ -1994,7 +2021,7 @@
     if(state.sessionConflict) return;
     const a=state.ctxAction;
     if((a.type==='talk' || a.type==='merchant' || a.type==='renamer' || a.type==='teleport') && a.target){
-      if(interactWithNpc(a.target)) return;
+      if(interactWithNpc(a.target, {byProximity:false})) return;
     }
     if(a.type==='enter'&&a.target){ doEnter(a.target); return; }
     attack(state.player.swingDir||0);
@@ -2538,6 +2565,7 @@
       if(passable(Math.floor(nx),Math.floor(state.player.y))) state.player.x=nx;
       if(passable(Math.floor(state.player.x),Math.floor(ny))) state.player.y=ny;
     }
+    releaseNpcProximityLocks();
     if(state.pendingNpcInteract){
       const wait = state.pendingNpcInteract;
       const still = state.npcs.find(n=>String(n.id||'')===wait.id) || state.npcs.find(n=>String(n.role||'')===wait.role && dist(Number(n.x||0),Number(n.y||0),wait.x,wait.y)<1.2);
@@ -2548,7 +2576,7 @@
         if(dToNpc <= 1.7){
           state.pendingNpcInteract = null;
           state.clickTarget = null;
-          interactWithNpc(still);
+          interactWithNpc(still, {byProximity:true});
         }
       }
     }
@@ -2726,8 +2754,9 @@
     if(state.zone==='village'&&t===5) switchZone('dungeon',1,'from_shallow');
     else if(state.zone==='village'&&t===10){
       const nowMs = Date.now();
-      if(!state.teleportOpen && (nowMs - Number(state.lastPortalOpenAt||0) > 1400)){
+      if(!state.teleportOpen && !state.portalProxLatched && (nowMs - Number(state.lastPortalOpenAt||0) > 1400)){
         state.lastPortalOpenAt = nowMs;
+        state.portalProxLatched = true;
         openTeleportModal();
       }
     }
@@ -2736,6 +2765,9 @@
     }
     else if(state.zone==='dungeon'&&t===9) switchZone('dungeon',state.floor+1,'from_shallow');
     else if(state.zone==='dungeon'&&t===8){ if(state.floor<=1) switchZone('village',0); else switchZone('dungeon',state.floor-1,'from_deeper'); }
+    if(!(state.zone==='village' && t===10)){
+      state.portalProxLatched = false;
+    }
 
     for(const p of state.particles) p.t+=dt;
     state.particles=state.particles.filter(p=>p.t<p.life);
@@ -2959,23 +2991,28 @@
     let tappedNpc = null, bestNpcD = 999;
     for(const n of state.npcs){
       if(!isInteractiveNpc(n)) continue;
+      if(isNpcProximityLocked(n)) continue;
       const dTap = dist(Number(n.x||0), Number(n.y||0), w.x, w.y);
       if(dTap < 2.6 && dTap < bestNpcD){ bestNpcD = dTap; tappedNpc = n; }
     }
-    const nearbyNpc = nearestNPC(4.2);
+    const nearbyNpc = nearestNPC(3.6);
     if(tappedNpc){
       const dPlayer = dist(Number(tappedNpc.x||0), Number(tappedNpc.y||0), state.player.x, state.player.y);
-      if(dPlayer <= 1.9 && interactWithNpc(tappedNpc)) return;
+      if(dPlayer <= 1.9 && interactWithNpc(tappedNpc, {byProximity:true})) return;
       queueNpcInteraction(tappedNpc);
       return;
     }
     if(nearbyNpc){
+      if(isNpcProximityLocked(nearbyNpc)){
+        // Ignore proximity trigger while latched; allow normal movement tap.
+      } else {
       const dTapNear = dist(Number(nearbyNpc.x||0), Number(nearbyNpc.y||0), w.x, w.y);
       if(dTapNear <= 1.35){
         const dNear = dist(Number(nearbyNpc.x||0), Number(nearbyNpc.y||0), state.player.x, state.player.y);
-        if(dNear <= 1.9 && interactWithNpc(nearbyNpc)) return;
+        if(dNear <= 1.9 && interactWithNpc(nearbyNpc, {byProximity:true})) return;
         queueNpcInteraction(nearbyNpc);
         return;
+      }
       }
     }
     const tx=Math.floor(w.x), ty=Math.floor(w.y), t=tileAt(tx,ty);
