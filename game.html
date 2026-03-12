@@ -1801,17 +1801,6 @@
     if(typeof dirAngle==='number'&&Number.isFinite(dirAngle)) state.player.swingDir=dirAngle;
     spawnSlashParticles();
 
-    // NPC interaction fallback: swinging near healer/merchant/etc triggers interaction
-    // even if tap-targeting missed due to mobile precision.
-    const npcCloseRange = state.zone === 'village' ? 4.6 : 2.1;
-    const npcClose = nearestNPC(npcCloseRange);
-    if(npcClose){
-      state.clickTarget = null;
-      state.pendingNpcInteract = null;
-      interactWithNpc(npcClose);
-      return;
-    }
-
     let hits=0;
     for(const e of state.enemies){
       if(!Number.isFinite(e.hp)) e.hp=1;
