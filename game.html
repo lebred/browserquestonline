@@ -2987,33 +2987,19 @@
   canvas.addEventListener('pointerdown',(e)=>{
     e.preventDefault(); tryAutoFullscreen();
     if(state.dead || state.sessionConflict) return;
+    if(panel.classList.contains('open')) return;
     const w=screenPointerToWorld(e);
     let tappedNpc = null, bestNpcD = 999;
     for(const n of state.npcs){
       if(!isInteractiveNpc(n)) continue;
       if(isNpcProximityLocked(n)) continue;
       const dTap = dist(Number(n.x||0), Number(n.y||0), w.x, w.y);
-      if(dTap < 2.6 && dTap < bestNpcD){ bestNpcD = dTap; tappedNpc = n; }
+      if(dTap < 0.95 && dTap < bestNpcD){ bestNpcD = dTap; tappedNpc = n; }
     }
-    const nearbyNpc = nearestNPC(3.6);
     if(tappedNpc){
       const dPlayer = dist(Number(tappedNpc.x||0), Number(tappedNpc.y||0), state.player.x, state.player.y);
       if(dPlayer <= 1.9 && interactWithNpc(tappedNpc, {byProximity:true})) return;
-      queueNpcInteraction(tappedNpc);
-      return;
-    }
-    if(nearbyNpc){
-      if(isNpcProximityLocked(nearbyNpc)){
-        // Ignore proximity trigger while latched; allow normal movement tap.
-      } else {
-      const dTapNear = dist(Number(nearbyNpc.x||0), Number(nearbyNpc.y||0), w.x, w.y);
-      if(dTapNear <= 1.35){
-        const dNear = dist(Number(nearbyNpc.x||0), Number(nearbyNpc.y||0), state.player.x, state.player.y);
-        if(dNear <= 1.9 && interactWithNpc(nearbyNpc, {byProximity:true})) return;
-        queueNpcInteraction(nearbyNpc);
-        return;
-      }
-      }
+      // Out of range: treat as movement instead of auto-following the NPC.
     }
     const tx=Math.floor(w.x), ty=Math.floor(w.y), t=tileAt(tx,ty);
     if((t===5||t===8||t===9||t===10) && dist(w.x,w.y,state.player.x,state.player.y)<2.2){ doEnter({x:tx,y:ty,t}); return; }
@@ -3059,8 +3045,17 @@
   });
   window.addEventListener('keyup',(e)=>{ const k=e.key.toLowerCase(); if(state.keys[k]!==undefined) state.keys[k]=false; if(k==='arrowup') state.keys.w=false; if(k==='arrowdown') state.keys.s=false; if(k==='arrowleft') state.keys.a=false; if(k==='arrowright') state.keys.d=false; });
 
-  document.getElementById('panelBtn').onclick=()=>panel.classList.toggle('open');
-  document.getElementById('panelCloseBtn').onclick=()=>panel.classList.remove('open');
+  document.getElementById('panelBtn').onclick=()=>{
+    const opening = !panel.classList.contains('open');
+    panel.classList.toggle('open');
+    if(!opening){
+      state.pendingNpcInteract = null;
+    }
+  };
+  document.getElementById('panelCloseBtn').onclick=()=>{
+    panel.classList.remove('open');
+    state.pendingNpcInteract = null;
+  };
   function refreshAuthUi(){
     const gbtn = document.getElementById('googleBtn');
     const lbtn = document.getElementById('logoutBtn');
