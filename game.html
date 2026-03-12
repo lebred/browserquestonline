@@ -1457,12 +1457,8 @@
       ctx.fillStyle='#10263f'; ctx.fillRect(sx-3,sy-8,2,2); ctx.fillRect(sx+1,sy-8,2,2);
       ctx.fillStyle='#d9bc8a'; ctx.fillRect(sx-1,sy-5,2,2);
     }
-    // Role labels above key NPCs.
-    let roleLabel = '';
-    if(n.role==='elder') roleLabel = state.lang==='fr' ? 'Guérisseur' : 'Healer';
-    else if(n.role==='merchant') roleLabel = state.lang==='fr' ? 'Marchand' : 'Shop';
-    else if(n.role==='teleporter') roleLabel = state.lang==='fr' ? 'Téléporteur' : 'Teleporter';
-    else if(n.role==='guard') roleLabel = state.lang==='fr' ? 'Garde' : 'Guard';
+    // Show NPC name above head for clearer identification.
+    const roleLabel = npcName(n);
     if(roleLabel){
       ctx.font = 'bold 11px system-ui';
       const w = Math.ceil(ctx.measureText(roleLabel).width) + 8;
