@@ -1,5 +1,12 @@
 # BrowserQuest Online Changelog
 
+## v0.21.3 - 2026-03-13
+- Wiki mobile portrait overhaul:
+  - table rows now render as stacked cards on small screens,
+  - each cell shows its own header label,
+  - no horizontal clipping/truncation for dense data tables.
+- Updated wiki section versions to `v0.21.3` for cache validation.
+
 ## v0.21.2 - 2026-03-13
 - Removed top version chip from game header.
 - Removed left-handed/right-handed menu toggle.

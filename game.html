@@ -283,7 +283,7 @@
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
-  const GAME_VERSION = '0.21.2';
+  const GAME_VERSION = '0.21.3';
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
