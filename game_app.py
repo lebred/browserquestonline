@@ -40,7 +40,7 @@ BLOG_ARTICLE_FILES = {
     'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
     'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
 }
-GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.21.3').strip() or '0.21.3'
+GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.21.4').strip() or '0.21.4'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -118,6 +118,20 @@ def _safe_display_name(raw: str, default: str = 'Player') -> str:
     if _contains_bad_words(n):
         return default
     return n
+
+
+def _normalize_legacy_guest_id(request: Request, gid: str) -> str:
+    g = str(gid or '').strip()
+    if g and g.lower() not in {'guest', 'default', 'null', 'undefined'}:
+        return g
+    ip = ''
+    try:
+        ip = str(request.client.host or '')
+    except Exception:
+        ip = ''
+    ua = str(request.headers.get('user-agent') or '')
+    seed = f'{ip}|{ua}|legacy-guest-fix-v1'
+    return f'legacy_{sha256(seed.encode("utf-8")).hexdigest()[:16]}'
 
 
 def _validate_player_name(raw: str) -> tuple[bool, str]:
@@ -335,6 +349,12 @@ def _sec_db() -> sqlite3.Connection:
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_guest_ip_daily_day_ip ON game_guest_ip_daily(day_key, ip, updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_floor_instances_zone_floor ON game_floor_instances(zone, floor, updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_retired_guests_time ON game_retired_guests(retired_at DESC)')
+    # Purge legacy shared guest artifacts created before strict guest_id handling.
+    cur.execute("DELETE FROM game_profiles WHERE user_key='guest:guest' OR lower(display_name)='guest-guest'")
+    cur.execute("DELETE FROM game_saves WHERE user_key='guest:guest'")
+    cur.execute("DELETE FROM game_presence WHERE user_key='guest:guest'")
+    cur.execute("DELETE FROM game_active_sessions WHERE user_key='guest:guest'")
+    cur.execute("DELETE FROM game_daily_kills WHERE user_key='guest:guest'")
     con.commit()
     _SEC_DB_SCHEMA_READY = True
     return con
@@ -400,6 +420,7 @@ def _game_identity(request: Request, guest_id: str | None = None, *, strict_gues
         if strict_guest:
             raise HTTPException(status_code=400, detail='guest_id required')
         gid = 'guest'
+    gid = _normalize_legacy_guest_id(request, gid)[:80]
     gname = _safe_display_name(f'Guest-{gid[:8]}')
     return (f'guest:{gid}', gname, False)
 
@@ -1304,8 +1325,12 @@ def game_leaderboard(limit: int = 20):
     con = _sec_db(); cur = con.cursor()
     cur.execute(
         '''
-        SELECT user_key, display_name, level, gold, max_floor, kills, quests_done, updated_at
-        FROM game_profiles
+        SELECT p.user_key, p.display_name, p.level, p.gold, p.max_floor, p.kills, p.quests_done, p.updated_at
+        FROM game_profiles p
+        LEFT JOIN game_retired_guests rg ON rg.guest_key = p.user_key
+        WHERE p.user_key <> 'guest:guest'
+          AND lower(p.display_name) <> 'guest-guest'
+          AND NOT (p.user_key LIKE 'guest:%' AND rg.guest_key IS NOT NULL)
         ORDER BY level DESC, max_floor DESC, gold DESC, kills DESC, updated_at DESC
         LIMIT ?
         ''',

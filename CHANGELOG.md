@@ -1,5 +1,10 @@
 # BrowserQuest Online Changelog
 
+## v0.21.4 - 2026-03-13
+- Fixed legacy shared guest identity issue (`guest:guest`) that could clone progress on leaderboard.
+- Added server-side normalization for bad legacy guest IDs (`guest/default/null/undefined`) to per-device stable IDs.
+- Added automatic purge/exclusion for old `guest:guest` artifacts in profiles/saves/presence/daily stats/leaderboard.
+
 ## v0.21.3 - 2026-03-13
 - Wiki mobile portrait overhaul:
   - table rows now render as stacked cards on small screens,

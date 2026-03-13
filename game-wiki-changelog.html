@@ -27,6 +27,13 @@
       <h1>🧾 Changelog</h1>
       <p class="muted">Use this page and the in-game version chip together to verify that your test session is running the expected build.</p>
 
+      <h2>v0.21.4 - 2026-03-13</h2>
+      <ul>
+        <li>Fixed legacy shared guest identity issue (`guest:guest`) that could create cloned leaderboard entries.</li>
+        <li>Added server-side normalization for legacy guest IDs (`guest/default/null/undefined`) into per-device stable IDs.</li>
+        <li>Purged old `guest:guest` artifacts from profiles/saves/presence/daily stats and excluded legacy clones from leaderboard.</li>
+      </ul>
+
       <h2>v0.21.3 - 2026-03-13</h2>
       <ul>
         <li>Reworked wiki tables for mobile portrait with stacked-card rows (no horizontal clipping).</li>
