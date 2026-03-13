@@ -1,5 +1,11 @@
 # BrowserQuest Online Changelog
 
+## v0.21.2 - 2026-03-13
+- Removed top version chip from game header.
+- Removed left-handed/right-handed menu toggle.
+- Mobile portrait: status panel now stretches full width at top for better readability.
+- Version remains visible in Journal logs and via `/api/game/version`.
+
 ## v0.21.1 - 2026-03-13
 - Added a distinct `26-30` gear progression tier with new items:
   - `Lame ombrale` (weapon)

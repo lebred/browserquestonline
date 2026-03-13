@@ -17,10 +17,7 @@
     .actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
     .btn{border:1px solid #3e63a0;background:var(--btn2);color:#ecf3ff;padding:6px 8px;border-radius:10px;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:12px}
     .btn.primary{background:linear-gradient(180deg,#2f6cd0,#2256ae)}
-    .version-chip{font-size:11px;color:#b6caea;background:rgba(16,29,54,.68);border:1px solid rgba(110,150,210,.4);padding:4px 7px;border-radius:999px}
-
     .status{position:absolute;top:44px;left:6px;z-index:19;padding:6px 8px;background:var(--glass);min-width:200px;max-width:min(90vw,300px);pointer-events:none}
-    #app.hud-right .status{left:auto;right:6px}
     .k{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
     .v{font-weight:800}
     .row{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
@@ -87,7 +84,7 @@
       .actions{justify-content:flex-start}
       .brand{display:none}
       .panel{left:8px;right:8px;top:auto;width:auto;bottom:136px;max-height:46vh}
-      .status{top:42px;right:8px;max-width:none}
+      .status{top:42px;left:8px;right:8px;min-width:0;max-width:none;width:auto}
       .hint{display:none}
       .dpad{bottom:84px}
       .action-wrap{bottom:84px}
@@ -131,8 +128,6 @@
         max-height:none;
       }
       .chat-ticker{bottom:6px;width:min(94vw,760px)}
-      #app.hud-left .status{left:6px;right:auto}
-      #app.hud-right .status{left:auto;right:6px}
     }
   </style>
 </head>
@@ -148,7 +143,6 @@
       <button class="btn" id="townPortalBtn">🌀 Town Portal</button>
       <button class="btn" id="audioBtn">🔇 Sound</button>
       <a class="btn primary" id="googleBtn" href="/api/game/auth/google/start?next_path=/game">🔐 Google</a>
-      <span class="version-chip" id="versionChip">v0.0.0</span>
     </div>
   </div>
 
@@ -163,7 +157,6 @@
     <div class="panel-head">
       <div class="k" id="menuTitle">Menu</div>
       <div style="display:flex;align-items:center;gap:6px">
-        <button class="btn" id="hudSideBtn" type="button">🖐️ Right-handed</button>
         <button class="btn" id="logoutBtn" type="button" style="display:none">🚪 Logout</button>
         <button class="btn" id="langBtn" type="button">🌐 EN</button>
         <button class="panel-close" id="panelCloseBtn" type="button">✕</button>
@@ -290,8 +283,7 @@
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
-  const GAME_VERSION = '0.21.1';
-  const CHANGELOG_PATH = '/wiki/changelog';
+  const GAME_VERSION = '0.21.2';
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
@@ -630,7 +622,6 @@
     forceSessionClaimOnce:false,
     audioOn:false,audioCtx:null,audioTimer:null,audioThemeKey:'',
     lang:(localStorage.getItem('orson_lang_v1')||'en')==='fr'?'fr':'en',
-    hudSide:(localStorage.getItem('orson_hud_side_v1')||'left')==='right'?'right':'left',
   };
   const I18N = {
     en:{
@@ -711,8 +702,6 @@
       renameCost:'Cost: 10000 gold',
       renameCancel:'Cancel',
       renameConfirm:'Confirm',
-      hudRight:'🖐️ Right-handed',
-      hudLeft:'✋ Left-handed',
       versionLabel:'Version',
     },
     fr:{
@@ -793,8 +782,6 @@
       renameCost:'Coût: 10000 or',
       renameCancel:'Annuler',
       renameConfirm:'Confirmer',
-      hudRight:'🖐️ Droitier',
-      hudLeft:'✋ Gaucher',
       versionLabel:'Version',
     },
   };
@@ -827,13 +814,6 @@
   function ensureQuests(){ if(!Array.isArray(state.quests)||!state.quests.length) state.quests=QUESTS.map(q=>({id:q.id,done:false})); }
   function log(msg){ const line=`[${new Date().toLocaleTimeString()}] ${msg}`; state.logs.unshift(line); if(state.logs.length>120) state.logs.length=120; panes.log.innerHTML=state.logs.map(x=>`<div>${x}</div>`).join(''); }
   function showDialog(msg,ms=2600){ dialog.textContent=msg; dialog.classList.add('show'); clearTimeout(showDialog._t); showDialog._t=setTimeout(()=>dialog.classList.remove('show'),ms); }
-  function applyHudSide(){
-    const app = document.getElementById('app');
-    if(!app) return;
-    app.classList.remove('hud-left','hud-right');
-    app.classList.add(state.hudSide === 'right' ? 'hud-right' : 'hud-left');
-    localStorage.setItem('orson_hud_side_v1', state.hudSide);
-  }
   function applyLanguage(){
     const b = document.getElementById('langBtn');
     if(b) b.textContent = `🌐 ${state.lang.toUpperCase()}`;
@@ -869,10 +849,6 @@
     if(renameCancelBtn) renameCancelBtn.textContent = tr('renameCancel');
     if(renameConfirmBtn) renameConfirmBtn.textContent = tr('renameConfirm');
     if(renameInput) renameInput.placeholder = state.lang==='fr' ? 'Nouveau pseudo' : 'New nickname';
-    const hudBtn = document.getElementById('hudSideBtn');
-    if(hudBtn) hudBtn.textContent = state.hudSide === 'right' ? tr('hudLeft') : tr('hudRight');
-    const vchip = document.getElementById('versionChip');
-    if(vchip) vchip.textContent = `v${GAME_VERSION}`;
     const t1=chatTicker?.querySelectorAll('.line')[0]; const t2=chatTicker?.querySelectorAll('.line')[1];
     if(t1) t1.textContent = `💬 ${tr('chatWelcome1')}`;
     if(t2) t2.textContent = `💬 ${tr('chatWelcome2')}`;
@@ -3179,11 +3155,6 @@
     }
   }
   audioBtn.onclick=()=>toggleMusic();
-  document.getElementById('hudSideBtn').onclick=()=>{
-    state.hudSide = state.hudSide === 'right' ? 'left' : 'right';
-    applyHudSide();
-    applyLanguage();
-  };
   document.getElementById('langBtn').onclick=()=>toggleLanguage();
   document.getElementById('logoutBtn').onclick=async ()=>{
     if(!state.auth.logged) return;
@@ -3311,9 +3282,8 @@
 
   async function boot(){
     ensureQuests(); recalcStats(); updateViewMetrics();
-    applyHudSide();
     applyLanguage();
-    log(`🧩 ${tr('versionLabel')} v${GAME_VERSION} · ${CHANGELOG_PATH}`);
+    log(`🧩 ${tr('versionLabel')} v${GAME_VERSION}`);
     setAudioBtn();
     state.view.camX=state.player.x-state.view.w/2; state.view.camY=state.player.y-state.view.h/2;
     switchZone('village',0);
