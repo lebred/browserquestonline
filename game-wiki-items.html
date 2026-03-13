@@ -19,13 +19,19 @@
     .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
     .card{padding:14px}
     h2{margin:0 0 8px 0;font-size:20px}
-    table{width:100%;border-collapse:collapse;font-size:14px}
-    th,td{border-bottom:1px solid rgba(95,128,178,.35);padding:8px;text-align:left;vertical-align:top}
+    table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+    th,td{border-bottom:1px solid rgba(95,128,178,.35);padding:8px;text-align:left;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}
     th{color:#dbe8ff;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
     .muted{color:var(--muted)} .k{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
     .chip{padding:3px 8px;border-radius:999px;border:1px solid #3d67a1;background:#0a1730;font-size:12px;font-weight:700}
     .c-common{color:#9fb2d8}.c-magic{color:#59b5ff}.c-rare{color:#b786ff}.c-epic{color:#ffb14a}
+    @media (max-width:760px){
+      .wrap{padding:10px}
+      table{font-size:11px}
+      th,td{padding:5px}
+      h2{font-size:18px}
+    }
   </style>
 </head>
 <body>
@@ -60,7 +66,8 @@
             <tr><td>Lame runique</td><td>11</td><td>2</td><td>6</td><td>160</td><td>10-20</td></tr>
             <tr><td>Épée draconique</td><td>15</td><td>3</td><td>12</td><td>290</td><td>15-25</td></tr>
             <tr><td>Claymore abyssale</td><td>19</td><td>4</td><td>18</td><td>560</td><td>21-30</td></tr>
-            <tr><td>Lame du néant</td><td>24</td><td>5</td><td>26</td><td>980</td><td>31-35</td></tr>
+            <tr><td>Lame ombrale</td><td>25</td><td>5</td><td>22</td><td>920</td><td>26-30</td></tr>
+            <tr><td>Lame du néant</td><td>29</td><td>6</td><td>26</td><td>980</td><td>31-35</td></tr>
             <tr><td>Espadon astral</td><td>31</td><td>7</td><td>40</td><td>1650</td><td>36-40</td></tr>
             <tr><td>Brise-comète</td><td>39</td><td>9</td><td>58</td><td>2750</td><td>41+</td></tr>
           </tbody>
@@ -77,6 +84,7 @@
             <tr><td>Bouclier runique</td><td>0</td><td>7</td><td>18</td><td>190</td><td>10-20</td></tr>
             <tr><td>Égide antique</td><td>1</td><td>10</td><td>28</td><td>320</td><td>15-25</td></tr>
             <tr><td>Rempart céleste</td><td>2</td><td>13</td><td>42</td><td>680</td><td>21-30</td></tr>
+            <tr><td>Aegis ombrale</td><td>2</td><td>17</td><td>66</td><td>980</td><td>26-30</td></tr>
             <tr><td>Bastion du néant</td><td>3</td><td>16</td><td>58</td><td>1220</td><td>31-35</td></tr>
             <tr><td>Mur astral</td><td>4</td><td>21</td><td>76</td><td>1980</td><td>36-40</td></tr>
             <tr><td>Citadelle éternelle</td><td>5</td><td>27</td><td>108</td><td>3200</td><td>41+</td></tr>
@@ -94,7 +102,7 @@
             <tr><td>Bottes runiques</td><td>4</td><td>10</td><td>+8%</td><td>210</td><td>10-20</td></tr>
             <tr><td>Bottes du néant</td><td>6</td><td>16</td><td>+11%</td><td>430</td><td>15-25</td></tr>
             <tr><td>Bottes astrales</td><td>8</td><td>24</td><td>+13%</td><td>760</td><td>21-30</td></tr>
-            <tr><td>Bottes du vortex</td><td>11</td><td>35</td><td>+16%</td><td>1300</td><td>31-35</td></tr>
+            <tr><td>Bottes du vortex</td><td>11</td><td>35</td><td>+16%</td><td>1300</td><td>26-30</td></tr>
             <tr><td>Bottes stellaires</td><td>14</td><td>49</td><td>+18%</td><td>2050</td><td>36-40</td></tr>
             <tr><td>Bottes des anciens</td><td>18</td><td>68</td><td>+21%</td><td>3280</td><td>41+</td></tr>
           </tbody>

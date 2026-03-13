@@ -290,7 +290,7 @@
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
-  const GAME_VERSION = '0.21.0';
+  const GAME_VERSION = '0.21.1';
   const CHANGELOG_PATH = '/wiki/changelog';
 
   const ITEMS = {
@@ -300,6 +300,7 @@
     'Lame runique': {slot:'weapon',atk:10,def:1,hp:4,value:180},
     'Épée draconique': {slot:'weapon',atk:15,def:2,hp:8,value:320},
     'Claymore abyssale': {slot:'weapon',atk:21,def:4,hp:16,value:680},
+    'Lame ombrale': {slot:'weapon',atk:25,def:5,hp:22,value:920},
     'Lame du néant': {slot:'weapon',atk:29,def:6,hp:26,value:1180},
     'Espadon astral': {slot:'weapon',atk:38,def:8,hp:36,value:1850},
     'Brise-comète': {slot:'weapon',atk:49,def:11,hp:52,value:2850},
@@ -308,6 +309,7 @@
     'Bouclier runique': {slot:'shield',atk:0,def:7,hp:26,value:190},
     'Égide antique': {slot:'shield',atk:1,def:10,hp:36,value:340},
     'Rempart céleste': {slot:'shield',atk:2,def:15,hp:58,value:720},
+    'Aegis ombrale': {slot:'shield',atk:2,def:17,hp:66,value:980},
     'Bastion du néant': {slot:'shield',atk:3,def:20,hp:78,value:1320},
     'Mur astral': {slot:'shield',atk:4,def:26,hp:104,value:2050},
     'Citadelle éternelle': {slot:'shield',atk:6,def:34,hp:138,value:3120},
@@ -348,6 +350,7 @@
       'Lame runique':'Runic Blade',
       'Épée draconique':'Draconic Sword',
       'Claymore abyssale':'Abyssal Claymore',
+      'Lame ombrale':'Umbral Blade',
       'Lame du néant':'Voidblade',
       'Espadon astral':'Astral Greatsword',
       'Brise-comète':'Cometbreaker',
@@ -356,6 +359,7 @@
       'Bouclier runique':'Runic Shield',
       'Égide antique':'Ancient Aegis',
       'Rempart céleste':'Celestial Bulwark',
+      'Aegis ombrale':'Umbral Aegis',
       'Bastion du néant':'Void Bastion',
       'Mur astral':'Astral Wall',
       'Citadelle éternelle':'Eternal Citadel',
@@ -589,8 +593,8 @@
     ['Lame runique','Bouclier runique','Bottes runiques','Armure du gardien','Anneau runique','Potion HP++'],
     ['Épée draconique','Égide antique','Bottes du néant','Armure de dragon','Anneau du phénix','Potion HP++'],
     ['Claymore abyssale','Rempart céleste','Bottes astrales','Armure du titan','Anneau du vide','Potion HP++','Potion HP+++'],
-    ['Lame du néant','Bastion du néant','Bottes du vortex','Carapace abyssale','Anneau cosmique','Potion HP+++','Potion HP++++'],
-    ['Espadon astral','Mur astral','Bottes stellaires','Égide stellaire','Anneau du crépuscule','Potion HP+++','Potion HP++++'],
+    ['Lame ombrale','Aegis ombrale','Bottes du vortex','Carapace abyssale','Anneau cosmique','Potion HP+++','Potion HP++++'],
+    ['Lame du néant','Bastion du néant','Bottes stellaires','Égide stellaire','Anneau du crépuscule','Potion HP+++','Potion HP++++'],
     ['Brise-comète','Citadelle éternelle','Bottes des anciens','Armure des anciens','Anneau mythique','Potion HP++++','Potion HP+++++'],
     ['Brise-comète','Citadelle éternelle','Bottes des anciens','Armure des anciens','Anneau mythique','Potion HP++++','Potion HP+++++'],
   ];
@@ -1929,8 +1933,8 @@
         ['Potion HP++','Lame runique','Bouclier runique','Armure du gardien','Anneau runique'],
         ['Potion HP++','Épée draconique','Égide antique','Armure de dragon','Anneau du phénix'],
         ['Potion HP++','Potion HP+++','Claymore abyssale','Rempart céleste','Bottes astrales','Armure du titan','Anneau du vide'],
-        ['Potion HP+++','Potion HP++++','Lame du néant','Bastion du néant','Bottes du vortex','Carapace abyssale','Anneau cosmique'],
-        ['Potion HP+++','Potion HP++++','Espadon astral','Mur astral','Bottes stellaires','Égide stellaire','Anneau du crépuscule'],
+        ['Potion HP+++','Potion HP++++','Lame ombrale','Aegis ombrale','Bottes du vortex','Carapace abyssale','Anneau cosmique'],
+        ['Potion HP+++','Potion HP++++','Lame du néant','Bastion du néant','Bottes stellaires','Égide stellaire','Anneau du crépuscule'],
         ['Potion HP++++','Potion HP+++++','Brise-comète','Citadelle éternelle','Bottes des anciens','Armure des anciens','Anneau mythique'],
         ['Potion HP++++','Potion HP+++++','Brise-comète','Citadelle éternelle','Bottes des anciens','Armure des anciens','Anneau mythique'],
       ];

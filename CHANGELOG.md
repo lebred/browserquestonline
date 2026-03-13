@@ -1,5 +1,15 @@
 # BrowserQuest Online Changelog
 
+## v0.21.1 - 2026-03-13
+- Added a distinct `26-30` gear progression tier with new items:
+  - `Lame ombrale` (weapon)
+  - `Aegis ombrale` (shield)
+- Updated tier loot/shop pools so floors `26-30` are no longer a flat continuation of `21-25`.
+- Improved wiki mobile rendering for vertical screens:
+  - fixed table layout,
+  - aggressive text wrapping,
+  - tighter mobile typography/padding for readability.
+
 ## v0.21.0 - 2026-03-13
 - Extended progression balancing for dungeon 41+ (loot quality, enemy scaling, shop tier continuity).
 - Added visible in-game version chip (`v0.21.0`) for cache/version verification.

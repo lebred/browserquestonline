@@ -16,9 +16,16 @@
     .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}.card{padding:14px}
     h2{margin:0 0 8px 0;font-size:20px}
     pre{margin:0;background:#09172d;border:1px solid #3e67a1;border-radius:10px;padding:10px;overflow:auto;color:#d8e8ff}
-    table{width:100%;border-collapse:collapse;font-size:14px}
-    th,td{border-bottom:1px solid rgba(95,128,178,.35);padding:8px;text-align:left;vertical-align:top}
+    table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+    th,td{border-bottom:1px solid rgba(95,128,178,.35);padding:8px;text-align:left;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}
     th{color:#dbe8ff;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+    @media (max-width:760px){
+      .wrap{padding:10px}
+      table{font-size:11px}
+      th,td{padding:5px}
+      pre{font-size:11px;padding:8px}
+      h2{font-size:18px}
+    }
   </style>
 </head>
 <body>
