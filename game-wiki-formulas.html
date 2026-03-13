@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BrowserQuest Wiki - Formulas</title>
+  <meta name="description" content="BrowserQuest Online gameplay formulas: tier scaling, rarity probabilities, enemy population, shop multipliers, death penalty." />
+  <style>
+    :root{--bg:#070f1f;--card:#102340;--line:#2d4f80;--text:#eaf2ff;--muted:#9ab3d9}
+    *{box-sizing:border-box} html,body{margin:0;padding:0;overflow-x:hidden}
+    body{font-family:Inter,system-ui;background:radial-gradient(1200px 700px at 12% -10%,#1a305a 0%,#070f1f 65%);color:var(--text)}
+    .wrap{max-width:1120px;margin:0 auto;padding:16px}
+    .top{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;padding:9px 12px;border:1px solid #4f75ad;border-radius:11px;background:#2e5fae;color:#fff;text-decoration:none;font-weight:800}
+    .hero,.card{background:linear-gradient(180deg,#0f2341,#0b1b35);border:1px solid var(--line);border-radius:16px}
+    .hero{padding:16px;margin-top:10px}.hero h1{margin:0 0 8px 0;font-size:clamp(24px,4.2vw,38px)}.hero p{margin:0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}.card{padding:14px}
+    h2{margin:0 0 8px 0;font-size:20px}
+    pre{margin:0;background:#09172d;border:1px solid #3e67a1;border-radius:10px;padding:10px;overflow:auto;color:#d8e8ff}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{border-bottom:1px solid rgba(95,128,178,.35);padding:8px;text-align:left;vertical-align:top}
+    th{color:#dbe8ff;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a class="btn" href="/wiki">⬅ Wiki Home</a>
+      <a class="btn" href="/wiki/progression">🧭 Progression</a>
+      <a class="btn" href="/wiki/items">🧱 Items</a>
+      <a class="btn" href="/wiki/enemies">👾 Enemies</a>
+    </div>
+
+    <section class="hero">
+      <h1>📐 Core Formulas (v0.21.0)</h1>
+      <p>These formulas mirror live gameplay logic and are the reference for balancing changes.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Tier and Level Gating</h2>
+        <pre>tier(floor) = floor((max(1, floor) - 1) / 5)
+required_level(floor) = 1 + 4 * tier(floor)
+checkpoint floors = multiples of 5</pre>
+      </article>
+
+      <article class="card">
+        <h2>Item and Rarity Scaling</h2>
+        <table>
+          <thead><tr><th>Rarity</th><th>Power multiplier</th><th>Value multiplier</th></tr></thead>
+          <tbody>
+            <tr><td>Common</td><td>1.00</td><td>1.00</td></tr>
+            <tr><td>Magic</td><td>1.12</td><td>1.85</td></tr>
+            <tr><td>Rare</td><td>1.38</td><td>4.20</td></tr>
+            <tr><td>Epic</td><td>2.55</td><td>14.00</td></tr>
+          </tbody>
+        </table>
+        <pre>item_score = ATK*1.45 + DEF*1.2 + HP*0.18 + HEAL*0.22 + MOVE_SPEED*180</pre>
+      </article>
+
+      <article class="card">
+        <h2>Rarity Probability by Floor</h2>
+        <table>
+          <thead><tr><th>Floor range</th><th>Magic</th><th>Rare</th><th>Epic</th></tr></thead>
+          <tbody>
+            <tr><td>1-4</td><td>5.0%</td><td>0.6%</td><td>0.015%</td></tr>
+            <tr><td>5-9</td><td>7.0%</td><td>1.1%</td><td>0.060%</td></tr>
+            <tr><td>10-14</td><td>9.0%</td><td>1.8%</td><td>0.120%</td></tr>
+            <tr><td>15-20</td><td>11.0%</td><td>2.8%</td><td>0.240%</td></tr>
+            <tr><td>21-30</td><td>13.0%</td><td>4.2%</td><td>0.500%</td></tr>
+            <tr><td>31-40</td><td>16.0%</td><td>6.0%</td><td>1.000%</td></tr>
+            <tr><td>41+</td><td>18.0%</td><td>8.2%</td><td>1.800%</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Enemy Population / Scaling</h2>
+        <pre>desired_enemy_count = min(14 + floor*2 + tier*3, cap)
+cap = 52 (floors &lt; 41), 64 (floors >= 41)
+
+base_hp = floor((18 + floor*5) * (1 + tier*0.55))
+base_atk = floor((3 + floor) * (1 + tier*0.4))
+base_xp = floor((8 + floor*2) * (1 + tier*0.3))
+base_gold = floor((2 + rand(5+floor)) * (1 + tier*0.22))</pre>
+      </article>
+
+      <article class="card">
+        <h2>Loot / Economy / Death</h2>
+        <pre>loot_roll_on_kill = 12.5%
+shop_buy_multiplier(consumable) = x10
+shop_buy_multiplier(equipment) = x25
+
+death_penalty = floor(0.10 * xp_need_for_current_level)
+if xp_after_penalty <= 0:
+  no death, hp set to max(1, floor(35% of hpMax))</pre>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

@@ -2,6 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://browserquest.online/game</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
   <url><loc>https://browserquest.online/wiki</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://browserquest.online/wiki/progression</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://browserquest.online/wiki/items</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://browserquest.online/wiki/enemies</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://browserquest.online/wiki/formulas</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://browserquest.online/wiki/changelog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://browserquest.online/wiki/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://browserquest.online/wiki/blog/meilleurs-jeux-browser-2026</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://browserquest.online/wiki/blog/browserquest-online-guide-complet</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BrowserQuest Wiki - Enemies</title>
+  <meta name="description" content="BrowserQuest Online enemy guide: archetypes, floor ranges, scaling behavior, and drop expectations." />
+  <style>
+    :root{--bg:#070f1f;--card:#102340;--line:#2d4f80;--text:#eaf2ff;--muted:#9ab3d9}
+    *{box-sizing:border-box} html,body{margin:0;padding:0;overflow-x:hidden}
+    body{font-family:Inter,system-ui;background:radial-gradient(1200px 700px at 12% -10%,#1a305a 0%,#070f1f 65%);color:var(--text)}
+    .wrap{max-width:1120px;margin:0 auto;padding:16px}
+    .top{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;padding:9px 12px;border:1px solid #4f75ad;border-radius:11px;background:#2e5fae;color:#fff;text-decoration:none;font-weight:800}
+    .hero,.card{background:linear-gradient(180deg,#0f2341,#0b1b35);border:1px solid var(--line);border-radius:16px}
+    .hero{padding:16px;margin-top:10px}.hero h1{margin:0 0 8px 0;font-size:clamp(24px,4.2vw,38px)}.hero p{margin:0;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+    .card{padding:14px} h2{margin:0 0 8px 0;font-size:20px}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    th,td{border-bottom:1px solid rgba(95,128,178,.35);padding:8px;text-align:left;vertical-align:top}
+    th{color:#dbe8ff;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+    .warn{padding:10px;border:1px solid #8a5d2e;background:#24170d;border-radius:10px;color:#ffd9a8}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a class="btn" href="/wiki">⬅ Wiki Home</a>
+      <a class="btn" href="/wiki/progression">🧭 Progression</a>
+      <a class="btn" href="/wiki/items">🧱 Items</a>
+      <a class="btn" href="/wiki/formulas">📐 Formulas</a>
+    </div>
+
+    <section class="hero">
+      <h1>👾 Enemies and Drop Bands (v0.21.0)</h1>
+      <p>Enemies scale by floor and tier, then branch by elite roll. Starting at floor 11, environmental lava adds sustained pressure in addition to combat damage.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Enemy Archetypes</h2>
+        <table>
+          <thead><tr><th>Type</th><th>Behavior</th><th>Power Profile</th><th>Appears</th></tr></thead>
+          <tbody>
+            <tr><td>Rat</td><td>Fast weak village unit</td><td>Low HP / low XP</td><td>Village</td></tr>
+            <tr><td>Slime</td><td>Baseline dungeon melee</td><td>Reference scaling unit</td><td>All floors</td></tr>
+            <tr><td>Brute</td><td>Tankier melee spike</td><td>~2.5x slime HP, stronger hit</td><td>All dungeon bands</td></tr>
+            <tr><td>Ogre</td><td>Heavy melee elite</td><td>High HP and consistent pressure</td><td>Tier 2+, boosted 31+</td></tr>
+            <tr><td>Dragon</td><td>Ranged projectile threat</td><td>Burst + projectile zoning</td><td>Tier 2+ elite roll</td></tr>
+            <tr><td>Archon</td><td>Late-game super-elite</td><td>Very high HP/ATK/XP</td><td>21+, stronger at 31+</td></tr>
+            <tr><td>Titan</td><td>Raid-style mega elite</td><td>Ultra high HP/ATK/XP</td><td>12+ rare, 41+ ultra variant</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Floor Difficulty Bands</h2>
+        <table>
+          <thead><tr><th>Floors</th><th>Main Pressure</th><th>Expected Rarity</th><th>Goal</th></tr></thead>
+          <tbody>
+            <tr><td>1-10</td><td>Slime/brute intro</td><td>Mostly Common + early Magic</td><td>Build core gear slots</td></tr>
+            <tr><td>11-20</td><td>Lava starts, dragon chance</td><td>Magic with occasional Rare</td><td>Learn spacing + sustain</td></tr>
+            <tr><td>21-30</td><td>Archon appears, elite density up</td><td>Magic/Rare mix</td><td>Prepare for deep checkpoint push</td></tr>
+            <tr><td>31-40</td><td>Hard elite scaling, stronger archon</td><td>High Rare probability</td><td>Farm upgrades before 41+</td></tr>
+            <tr><td>41+</td><td>Titan ultra variants + heavy damage scaling</td><td>Best Epic odds in game</td><td>Long-term endgame grind</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Drop Mapping by Progress</h2>
+        <table>
+          <thead><tr><th>Enemy Group</th><th>Common Drop Pool Trend</th><th>Rare/Epic Potential</th></tr></thead>
+          <tbody>
+            <tr><td>Slime/Brute (1-10)</td><td>Starter weapons, wood/reinforced shield, light boots, HP potions</td><td>Very low (mainly Common)</td></tr>
+            <tr><td>Ogre/Dragon (11-20)</td><td>Runic/guardian pool, better potion sustain</td><td>Low-to-medium Rare chance</td></tr>
+            <tr><td>Archon/Titan (21-30)</td><td>Abyssal + celestial equipment line</td><td>Realistic Rare farming begins</td></tr>
+            <tr><td>Archon strong rolls (31-40)</td><td>Void + astral equipment line</td><td>Meaningful Epic probability</td></tr>
+            <tr><td>Titan ultra (41+)</td><td>Ancients/mythic top line, highest potion tiers</td><td>Best Epic farming window</td></tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>Spawn and Respawn Notes</h2>
+        <ul>
+          <li>Target enemy density increases with floor and tier, then capped for performance.</li>
+          <li>Respawn interval gets shorter when floor density drops (anti-empty-floor behavior).</li>
+          <li>Checkpoint floors (`5/10/15/...`) include teleporter return tile and still maintain combat pressure away from specials.</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="warn"><strong>Warning:</strong> Floor 41+ is tuned as endgame. If your upgrades are below late astral/ancients quality, farm 31-40 before pushing.</div>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BrowserQuest Wiki - Changelog</title>
+  <meta name="description" content="BrowserQuest Online version history and release notes." />
+  <style>
+    :root{--bg:#070f1f;--card:#102340;--line:#2d4f80;--text:#eaf2ff;--muted:#9ab3d9}
+    *{box-sizing:border-box} html,body{margin:0;padding:0;overflow-x:hidden}
+    body{font-family:Inter,system-ui;background:radial-gradient(1200px 700px at 12% -10%,#1a305a 0%,#070f1f 65%);color:var(--text)}
+    .wrap{max-width:1000px;margin:0 auto;padding:16px}
+    .top{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;padding:9px 12px;border:1px solid #4f75ad;border-radius:11px;background:#2e5fae;color:#fff;text-decoration:none;font-weight:800}
+    .card{margin-top:10px;background:linear-gradient(180deg,#0f2341,#0b1b35);border:1px solid var(--line);border-radius:16px;padding:16px}
+    h1{margin:0 0 8px 0;font-size:clamp(24px,4.2vw,38px)} h2{margin:14px 0 6px 0;font-size:20px}
+    ul{margin:8px 0 0 0} li{margin:5px 0} .muted{color:var(--muted)} code{background:#09172d;border:1px solid #3e67a1;padding:1px 6px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <a class="btn" href="/wiki">⬅ Wiki Home</a>
+      <a class="btn" href="/game">🎮 Play</a>
+    </div>
+
+    <section class="card">
+      <h1>🧾 Changelog</h1>
+      <p class="muted">Use this page and the in-game version chip together to verify that your test session is running the expected build.</p>
+
+      <h2>v0.21.0 - 2026-03-13</h2>
+      <ul>
+        <li>Extended progression balancing support up to floor <strong>41+</strong>.</li>
+        <li>Visible in-game version chip to validate cache freshness.</li>
+        <li>Added/kept handedness HUD side toggle with persistence.</li>
+        <li>Hardened guest migration flow to prevent clone profiles after Google account claim.</li>
+        <li>Rebuilt wiki into organized subpages with formulas and full item/enemy/progression docs.</li>
+        <li>Added <code>/api/game/version</code> endpoint and wiki pages to sitemap.</li>
+      </ul>
+
+      <h2>v0.20.0 - 2026-03-13</h2>
+      <ul>
+        <li>Initial 41+ content prep and first version-chip groundwork.</li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>

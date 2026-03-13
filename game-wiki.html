@@ -3,445 +3,99 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BrowserQuest Online Wiki - Items, Floors, Bosses, Drops</title>
-  <meta name="description" content="Wiki officiel BrowserQuest Online: progression, floors, drops, raretés, items, boss titans, contrôles mobile/PC et mécaniques détaillées." />
-  <link rel="canonical" href="https://browserquest.online/wiki" />
+  <title>BrowserQuest Online Wiki</title>
+  <meta name="description" content="Official BrowserQuest Online wiki: progression, items, enemies, formulas, and patch history." />
   <style>
-    :root{
-      --bg:#071225;
-      --bg2:#0c1b34;
-      --panel:#0f213f;
-      --panel2:#10284c;
-      --line:rgba(122,164,230,.28);
-      --text:#eaf2ff;
-      --muted:#aac0e9;
-      --btn:#1f3e75;
-      --btn2:#2a5cad;
-      --accent:#58d49b;
-      --warn:#f3bc68;
-      --danger:#ff8b8b;
-      --shadow:0 14px 28px rgba(0,0,0,.28);
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
-    body{
-      color:var(--text);
-      font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto;
-      background:
-        radial-gradient(1200px 700px at 20% -10%, rgba(70,130,220,.28), transparent 55%),
-        radial-gradient(900px 700px at 95% 0%, rgba(88,212,155,.16), transparent 50%),
-        linear-gradient(180deg,var(--bg2),var(--bg));
-    }
-    a{color:#9fd0ff;text-decoration:none}
-    a:hover{text-decoration:underline}
-
-    .wrap{max-width:1280px;margin:0 auto;padding:18px}
-    .hero{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-    .title{font-size:clamp(28px,4vw,42px);font-weight:900;letter-spacing:.02em;margin:0}
-    .subtitle{color:var(--muted);margin-top:6px;max-width:820px}
-
-    .actions{display:flex;gap:8px;flex-wrap:wrap}
-    .btn{
-      display:inline-flex;align-items:center;gap:6px;
-      padding:9px 13px;border-radius:12px;border:1px solid #3a67a8;
-      background:linear-gradient(180deg,var(--btn2),var(--btn));
-      color:#ecf4ff;font-weight:800;cursor:pointer;box-shadow:var(--shadow)
-    }
-    .btn.alt{background:linear-gradient(180deg,#17345f,#112646)}
-
-    .layout{display:grid;grid-template-columns:290px 1fr;gap:14px;margin-top:14px}
-
-    .toc{
-      position:sticky;top:12px;align-self:start;
-      background:linear-gradient(180deg,rgba(16,40,76,.85),rgba(13,31,58,.9));
-      border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:var(--shadow)
-    }
-    .toc h2{margin:0 0 10px 0;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:#d8e8ff}
-    .toc a{display:block;padding:7px 8px;border-radius:9px;color:#cfe2ff;font-weight:650;font-size:14px}
-    .toc a:hover{background:rgba(120,160,220,.14);text-decoration:none}
-
-    .content{display:flex;flex-direction:column;gap:12px}
-    .card{
-      background:linear-gradient(180deg,rgba(16,40,76,.92),rgba(13,31,58,.95));
-      border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow)
-    }
-    .card h2{margin:0 0 10px 0;font-size:22px}
-    .card h3{margin:12px 0 8px 0;font-size:17px}
-    .lead{color:var(--muted)}
-
-    .chips{display:flex;gap:6px;flex-wrap:wrap}
-    .chip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;border:1px solid;font-size:12px;font-weight:800}
-    .c-common{color:#b8c9ea;border-color:#b8c9ea}
-    .c-magic{color:#73c2ff;border-color:#73c2ff}
-    .c-rare{color:#c193ff;border-color:#c193ff}
-    .c-epic{color:#ffc36c;border-color:#ffc36c}
-
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .mini{background:rgba(10,24,45,.5);border:1px solid rgba(120,160,220,.24);border-radius:12px;padding:10px}
-    ul{margin:8px 0 0 18px;padding:0}
-    li{margin:6px 0}
-
-    table{width:100%;border-collapse:collapse;font-size:14px;background:rgba(7,16,30,.45);border-radius:12px;overflow:hidden;table-layout:fixed;word-break:break-word}
-    th,td{padding:9px 8px;border-bottom:1px solid rgba(120,160,220,.22);text-align:left;vertical-align:top}
-    th{background:rgba(30,58,102,.5);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#dbe9ff}
-    tr:last-child td{border-bottom:none}
-
-    code{background:rgba(5,14,28,.8);border:1px solid rgba(120,160,220,.25);padding:2px 6px;border-radius:6px}
-    .small{font-size:12px;color:var(--muted)}
-    .sep{height:1px;background:linear-gradient(90deg,transparent,rgba(120,160,220,.45),transparent);margin:10px 0}
-
-    @media (max-width:1060px){
-      .layout{grid-template-columns:1fr}
-      .toc{position:relative;top:auto}
-    }
-    @media (max-width:760px){
-      .grid{grid-template-columns:1fr}
-      .wrap{padding:12px}
-      .card{padding:12px}
-      .toc a{padding:8px 10px}
-    }
+    :root{--bg:#070f1f;--card:#102340;--line:#2d4f80;--text:#eaf2ff;--muted:#9ab3d9;--acc:#3b82f6;--acc2:#8b5cf6}
+    *{box-sizing:border-box} html,body{margin:0;padding:0;overflow-x:hidden}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:radial-gradient(1200px 700px at 15% -10%,#1b3765 0%,#070f1f 65%);color:var(--text)}
+    .wrap{max-width:1120px;margin:0 auto;padding:16px}
+    .top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 13px;border:1px solid #4f75ad;border-radius:12px;background:linear-gradient(180deg,#3768b8,#2a5599);color:#fff;text-decoration:none;font-weight:800}
+    .btn.alt{background:linear-gradient(180deg,#6740bd,#4c2f8f)}
+    .hero,.card,.toc{background:linear-gradient(180deg,#0f2341,#0b1b35);border:1px solid var(--line);border-radius:16px}
+    .hero{padding:18px;margin-top:10px}
+    .hero h1{margin:0 0 6px 0;font-size:clamp(26px,4.8vw,44px)}
+    .hero p{margin:0;color:var(--muted);line-height:1.5}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .chip{display:inline-flex;padding:4px 10px;border-radius:999px;border:1px solid #446da8;background:#0a1730;color:#d6e5ff;font-weight:700;font-size:12px}
+    .layout{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-top:12px}
+    .toc{padding:14px}
+    .toc h2{margin:0 0 8px 0;font-size:18px}
+    .toc ol{margin:0;padding-left:18px}
+    .toc a{color:#d6e6ff;text-decoration:none}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+    .card{padding:14px;text-decoration:none;color:inherit;transition:transform .14s ease,border-color .14s ease}
+    .card:hover{transform:translateY(-2px);border-color:#6ea0e9}
+    .card h3{margin:0 0 6px 0;font-size:18px}
+    .card p{margin:0;color:var(--muted);line-height:1.45}
+    .notice{margin-top:12px;padding:12px;border:1px solid #3f68a4;border-radius:12px;background:#0c1b33;color:#cfe0ff}
+    @media (max-width:900px){.layout{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="hero">
-    <div>
-      <h1 class="title">📚 BROWSERQUEST ONLINE WIKI</h1>
-      <div class="subtitle" id="subtitle"></div>
-      <div class="chips" style="margin-top:8px">
-        <span class="chip c-common" id="chipCommon"></span>
-        <span class="chip c-magic" id="chipMagic"></span>
-        <span class="chip c-rare" id="chipRare"></span>
-        <span class="chip c-epic" id="chipEpic"></span>
+  <div class="wrap">
+    <div class="top">
+      <a class="btn" href="/game">🎮 Play</a>
+      <a class="btn" href="/wiki/progression">🧭 Progression</a>
+      <a class="btn" href="/wiki/items">🧱 Items</a>
+      <a class="btn" href="/wiki/enemies">👾 Enemies</a>
+      <a class="btn" href="/wiki/formulas">📐 Formulas</a>
+      <a class="btn alt" href="/wiki/changelog">🧾 Changelog</a>
+    </div>
+
+    <section class="hero">
+      <h1>📘 BrowserQuest Online Wiki</h1>
+      <p>Single source of truth for progression, drop logic, rarity math, enemy scaling, and live patch notes. Optimized for fast browsing on desktop and mobile.</p>
+      <div class="chips">
+        <span class="chip">Live Version: v0.21.0</span>
+        <span class="chip">Scope: Floor 1 → 41+</span>
+        <span class="chip">Language: EN / FR in-game</span>
       </div>
-    </div>
-    <div class="actions">
-      <button class="btn alt" id="langBtn">🌐 FR</button>
-      <a class="btn" href="/game" id="playBtn">🎮 Play</a>
-      <a class="btn alt" href="/wiki/blog" id="blogBtn">📰 Blog</a>
-    </div>
-  </header>
+    </section>
 
-  <div class="layout">
-    <aside class="toc">
-      <h2 id="tocTitle">Table of Contents</h2>
-      <a href="#overview" id="toc1"></a>
-      <a href="#formulas" id="toc2"></a>
-      <a href="#rarity" id="toc3"></a>
-      <a href="#drops" id="toc4"></a>
-      <a href="#shop" id="toc5"></a>
-      <a href="#items" id="toc6"></a>
-      <a href="#enemies" id="toc7"></a>
-      <a href="#quests" id="toc8"></a>
-      <a href="#controls" id="toc9"></a>
-      <a href="/wiki/blog" id="toc10">📰 Blog SEO</a>
-    </aside>
+    <div class="layout">
+      <div class="grid">
+        <a class="card" href="/wiki/progression">
+          <h3>🧭 Progression Guide</h3>
+          <p>Difficulty tiers, floor checkpoints, teleporter unlocks, recommended level bands, and practical route planning up to 41+.</p>
+        </a>
+        <a class="card" href="/wiki/items">
+          <h3>🧱 Items, Slots, Rarity</h3>
+          <p>All items grouped by type with base stats and rarity scaling. Includes shop pool by tier and late-game power bands.</p>
+        </a>
+        <a class="card" href="/wiki/enemies">
+          <h3>👾 Enemies and Drops</h3>
+          <p>Enemy families by floor range, special units (dragons, archons, titans), and expected loot quality per band.</p>
+        </a>
+        <a class="card" href="/wiki/formulas">
+          <h3>📐 Mathematical Formulas</h3>
+          <p>Exact gameplay formulas for tiers, level gating, enemy count, rarity probabilities, death penalty, and economy multipliers.</p>
+        </a>
+        <a class="card" href="/wiki/changelog">
+          <h3>🧾 Patch History</h3>
+          <p>Versioned updates used for rollback validation and cache verification while testing across devices.</p>
+        </a>
+        <a class="card" href="/wiki/blog">
+          <h3>📰 SEO Blog</h3>
+          <p>Public-facing long-form indexed articles for growth and discoverability.</p>
+        </a>
+      </div>
 
-    <main class="content">
-      <section class="card" id="overview">
-        <h2 id="overviewTitle"></h2>
-        <p class="lead" id="overviewLead"></p>
-        <div class="grid">
-          <div class="mini"><h3 id="overviewCol1"></h3><ul id="overviewList1"></ul></div>
-          <div class="mini"><h3 id="overviewCol2"></h3><ul id="overviewList2"></ul></div>
+      <aside class="toc">
+        <h2>Table of Contents</h2>
+        <ol>
+          <li><a href="/wiki/progression">Progression system and checkpoints</a></li>
+          <li><a href="/wiki/items">Items by slot and rarity behavior</a></li>
+          <li><a href="/wiki/enemies">Enemy archetypes and scaling</a></li>
+          <li><a href="/wiki/formulas">Damage/XP/economy formulas</a></li>
+          <li><a href="/wiki/changelog">Version timeline and rollback IDs</a></li>
+        </ol>
+        <div class="notice">
+          <strong>Testing tip:</strong> compare the in-game version chip with this wiki version before validating a fix. If they differ, you are still on a cached build.
         </div>
-      </section>
-
-      <section class="card" id="formulas">
-        <h2 id="formTitle"></h2>
-        <div class="grid">
-          <div class="mini"><h3 id="formCore"></h3><ul id="formCoreList"></ul></div>
-          <div class="mini"><h3 id="formZones"></h3><ul id="formZoneList"></ul></div>
-        </div>
-      </section>
-
-      <section class="card" id="rarity">
-        <h2 id="rarityTitle"></h2>
-        <table id="rarityTable"></table>
-      </section>
-
-      <section class="card" id="drops">
-        <h2 id="dropTitle"></h2>
-        <p class="small" id="dropLead"></p>
-        <table id="dropTable"></table>
-      </section>
-
-      <section class="card" id="shop">
-        <h2 id="shopTitle"></h2>
-        <p class="small" id="shopLead"></p>
-        <table id="shopTable"></table>
-      </section>
-
-      <section class="card" id="items">
-        <h2 id="itemsTitle"></h2>
-        <p class="small" id="itemsLead"></p>
-        <table id="itemsTable"></table>
-      </section>
-
-      <section class="card" id="enemies">
-        <h2 id="enemyTitle"></h2>
-        <table id="enemyTable"></table>
-      </section>
-
-      <section class="card" id="quests">
-        <h2 id="questTitle"></h2>
-        <table id="questTable"></table>
-      </section>
-
-      <section class="card" id="controls">
-        <h2 id="controlTitle"></h2>
-        <ul id="controlList"></ul>
-      </section>
-      <section class="card" id="seo">
-        <h2>🔎 SEO & Discovery</h2>
-        <p class="lead">BrowserQuest Online publie des pages wiki indexables et un blog dédié à la découverte du jeu. Le sitemap est disponible à <code>/sitemap.xml</code>.</p>
-        <p>Pour Google Search Console: ajoutez la propriété <code>https://browserquest.online</code>, puis soumettez <code>https://browserquest.online/sitemap.xml</code>.</p>
-      </section>
-    </main>
+      </aside>
+    </div>
   </div>
-</div>
-
-<script>
-(() => {
-  const data = {
-    rarity: [
-      {k:'common',pow:1.00,val:1.00,cls:'c-common'},
-      {k:'magic',pow:1.12,val:1.85,cls:'c-magic'},
-      {k:'rare',pow:1.38,val:4.20,cls:'c-rare'},
-      {k:'epic',pow:2.55,val:14.00,cls:'c-epic'},
-    ],
-    rarityOdds: [
-      {range:'1-4', common:'94.385%', magic:'5.0%', rare:'0.6%', epic:'0.015%'},
-      {range:'5-9', common:'91.84%',  magic:'7.0%', rare:'1.1%', epic:'0.06%'},
-      {range:'10-14', common:'89.08%', magic:'9.0%', rare:'1.8%', epic:'0.12%'},
-      {range:'15+', common:'85.96%', magic:'11.0%', rare:'2.8%', epic:'0.24%'},
-    ],
-    lootPools: [
-      {tier:0, floors:'Village + Dungeon 1-5', items:['Dague rouillée','Amulette terne','Bottes légères','Bouclier en bois','Potion HP']},
-      {tier:1, floors:'Dungeon 6-10', items:['Épée de garde','Bouclier renforcé','Anneau d\'acier','Potion HP','Potion HP++']},
-      {tier:2, floors:'Dungeon 11-15', items:['Lame runique','Bouclier runique','Armure du gardien','Anneau runique','Potion HP++']},
-      {tier:3, floors:'Dungeon 16+', items:['Épée draconique','Égide antique','Armure de dragon','Anneau du phénix','Potion HP++']},
-      {tier:4, floors:'Dungeon 21+', items:['Claymore abyssale','Rempart céleste','Bottes astrales','Armure du titan','Anneau du vide','Potion HP+++']},
-    ],
-    shopTiers: [
-      {tier:0, unlock:'max_floor 1-5', items:['Épée courte','Bouclier en bois','Tunique renforcée','Anneau d\'acier','Potion HP']},
-      {tier:1, unlock:'max_floor 6-10', items:['Épée de garde','Bouclier renforcé','Tunique renforcée','Anneau d\'acier','Potion HP','Potion HP++']},
-      {tier:2, unlock:'max_floor 11-15', items:['Lame runique','Bouclier runique','Armure du gardien','Anneau runique','Potion HP++']},
-      {tier:3, unlock:'max_floor 16+', items:['Épée draconique','Égide antique','Armure de dragon','Anneau du phénix','Potion HP++']},
-      {tier:4, unlock:'max_floor 21+', items:['Claymore abyssale','Rempart céleste','Bottes astrales','Armure du titan','Anneau du vide','Potion HP++','Potion HP+++']},
-    ],
-    items:[
-      {n:'Dague rouillée',s:'weapon',atk:2,def:0,hp:0,heal:0,v:12},
-      {n:'Épée courte',s:'weapon',atk:4,def:0,hp:0,heal:0,v:45},
-      {n:'Épée de garde',s:'weapon',atk:6,def:1,hp:0,heal:0,v:85},
-      {n:'Lame runique',s:'weapon',atk:10,def:1,hp:4,heal:0,v:180},
-      {n:'Épée draconique',s:'weapon',atk:15,def:2,hp:8,heal:0,v:320},
-      {n:'Claymore abyssale',s:'weapon',atk:21,def:4,hp:16,heal:0,v:680},
-      {n:'Bouclier en bois',s:'shield',atk:0,def:2,hp:8,heal:0,v:35},
-      {n:'Bouclier renforcé',s:'shield',atk:0,def:4,hp:16,heal:0,v:78},
-      {n:'Bouclier runique',s:'shield',atk:0,def:7,hp:26,heal:0,v:190},
-      {n:'Égide antique',s:'shield',atk:1,def:10,hp:36,heal:0,v:340},
-      {n:'Rempart céleste',s:'shield',atk:2,def:15,hp:58,heal:0,v:720},
-      {n:'Bottes légères',s:'armor',atk:0,def:1,hp:0,heal:0,v:18},
-      {n:'Bottes astrales',s:'armor',atk:3,def:10,hp:30,heal:0,v:760},
-      {n:'Tunique renforcée',s:'armor',atk:0,def:3,hp:12,heal:0,v:60},
-      {n:'Armure du gardien',s:'armor',atk:0,def:8,hp:34,heal:0,v:220},
-      {n:'Armure de dragon',s:'armor',atk:2,def:12,hp:52,heal:0,v:390},
-      {n:'Armure du titan',s:'armor',atk:4,def:18,hp:84,heal:0,v:780},
-      {n:'Amulette terne',s:'ring',atk:0,def:0,hp:10,heal:0,v:26},
-      {n:'Anneau d\'acier',s:'ring',atk:1,def:1,hp:6,heal:0,v:54},
-      {n:'Anneau runique',s:'ring',atk:3,def:2,hp:16,heal:0,v:210},
-      {n:'Anneau du phénix',s:'ring',atk:5,def:4,hp:26,heal:0,v:360},
-      {n:'Anneau du vide',s:'ring',atk:8,def:6,hp:40,heal:0,v:790},
-      {n:'Potion HP',s:'consumable',atk:0,def:0,hp:0,heal:25,v:16},
-      {n:'Potion HP++',s:'consumable',atk:0,def:0,hp:0,heal:80,v:85},
-      {n:'Potion HP+++',s:'consumable',atk:0,def:0,hp:0,heal:160,v:220},
-    ],
-    enemies:[
-      {e:'Rat 🐀',z:'Village',hp:'12',atk:'3',xp:'8',g:'2-6',note:'Fast starter mob.'},
-      {e:'Slime 🟢',z:'Dungeon',hp:'18 + floor*5 (tier-scaled)',atk:'3+floor (tier-scaled)',xp:'8+2*floor (tier-scaled)',g:'2..(5+floor) scaled',note:'Default dungeon enemy.'},
-      {e:'Brute 🧱',z:'Dungeon',hp:'~2.5x base',atk:'+2 + floor/2',xp:'~2.0x',g:'+8..+19',note:'Tankier melee.'},
-      {e:'Ogre 👹',z:'Dungeon miniboss roll',hp:'~3.5x base',atk:'+5 + floor/3',xp:'~2.5x',g:'+14..+31',note:'Slow heavy bruiser.'},
-      {e:'Dragon 🐉',z:'Dungeon miniboss roll (tier≥2)',hp:'~4.6x base',atk:'+7 + floor/2',xp:'~3.1x',g:'+24..+53',note:'Melee + ranged projectiles (fire/frost/shadow by floor).'},
-      {e:'Titan 🦖',z:'Dungeon 12+ rare boss',hp:'~12.6x base',atk:'+20 + floor*1.15',xp:'~7.8x (with floor minimum)',g:'+95..+214',note:'Ultra tanky raid-type boss.'},
-      {e:'Archon 👿',z:'Dungeon 21+ rare boss',hp:'~7.4x base',atk:'+15 + floor*0.95',xp:'~4.9x (with floor minimum)',g:'+60..+145',note:'Late-game elite forcing gear progression.'},
-    ],
-    quests:[
-      {id:'q_rat_hunt',q:'Rat Hunter',o:'Kill 5 rats',r:'25 gold + 20 XP'},
-      {id:'q_floor_two',q:'First Descent',o:'Reach dungeon floor 2',r:'40 gold + 35 XP'},
-      {id:'q_potions',q:'Potion Collector',o:'Find 3 potions',r:'20 gold + 20 XP'},
-    ]
-  };
-
-  const i18n = {
-    en:{
-      subtitle:'Beautiful, complete and structured reference for all current game systems.',
-      play:'🎮 Play',
-      toc:'🧭 Table of Contents',
-      tocItems:['✨ Overview','📐 Core formulas','🎨 Rarity','🎁 Drop tables','🛒 Merchant tiers','🧱 Full item catalog','👾 Enemies','📜 Quests','🎮 Controls'],
-      overviewTitle:'✨ Overview',
-      overviewLead:'Everything below is synced with current game constants and mechanics.',
-      overviewCol1:'Gameplay Loop',
-      overviewCol2:'Progression Rules',
-      overview1:['Real-time ARPG in browser, persistent saves, multiplayer presence/chat.','Dungeon floors with rising difficulty every 5 floors.','Town checkpoints at floor 5/10/15/... via teleporter.'],
-      overview2:['Death penalty: lose 10% of current level XP requirement.','If XP would hit 0, death is prevented and player survives at low HP.','Daily leaderboard tracks kills per player each day.'],
-      formTitle:'📐 Core Formulas',
-      formCore:'Combat / Economy',
-      formZones:'Zones / Scaling',
-      formCoreList:['Tier: <code>floor((max(1,floor)-1)/5)</code>.','Recommended level: <code>1 + tier*4</code>.','Enemy count target: <code>min(14 + floor*2 + tier*3, 44)</code>.','Merchant buy: consumables x10, gear x25 on base value.','Sell value: <code>floor(item_value * 0.55)</code>.'],
-      formZoneList:['Village contains healer, merchant, teleporter, guard.','Dungeon has up/down stairs + portal tile on floors divisible by 5.','Town Portal cast time: 3s, interrupted by move/hit.'],
-      rarityTitle:'🎨 Rarity Multipliers (Exact)',
-      rarityHdr:['Rarity','Power (ATK/DEF/HP)','Value'],
-      rarityLabel:{common:'Common',magic:'Magic',rare:'Rare',epic:'Epic'},
-      dropTitle:'🎁 Drop Tables',
-      dropLead:'Loot roll is 12.5% on enemy kill, then item is selected by pool tier and rarity is rolled by floor bracket.',
-      dropHdr:['Tier','Floor bracket / zone','Pool items','Rarity odds (common / magic / rare / epic)'],
-      shopTitle:'🛒 Merchant Tiers',
-      shopLead:'Merchant inventory depends on max floor reached. Sold items are common rarity variants.',
-      shopHdr:['Tier','Unlock condition','Stock'],
-      itemsTitle:'🧱 Full Item Catalog (Base/Common)',
-      itemsLead:'Final item stats/value are base × rarity multipliers. Potions are always common in inventory logic.',
-      itemsHdr:['Item','Slot','ATK','DEF','HP','Heal','Base value'],
-      enemyTitle:'👾 Enemy Reference',
-      enemyHdr:['Enemy','Zone','HP model','ATK model','XP model','Gold model','Notes'],
-      questTitle:'📜 Quest Reference',
-      questHdr:['ID','Quest','Objective','Reward'],
-      controlTitle:'🎮 Controls & Notes',
-      controls:['PC: WASD/Arrows move, Space/E attack, P potion, T Town Portal.','Mobile: D-pad + ATK, tap-to-move attack, menu chat panel.','Melee attack cadence ~340ms.','Enemy attacks can interrupt portal cast.'],
-      slots:{weapon:'Weapon',shield:'Shield',armor:'Armor',ring:'Ring',consumable:'Consumable'}
-    },
-    fr:{
-      subtitle:'Référence complète, claire et bien structurée de toutes les mécaniques actuelles du jeu.',
-      play:'🎮 Jouer',
-      toc:'🧭 Table des matières',
-      tocItems:['✨ Vue d\'ensemble','📐 Formules clés','🎨 Rareté','🎁 Tables de drop','🛒 Paliers marchand','🧱 Catalogue complet items','👾 Ennemis','📜 Quêtes','🎮 Contrôles'],
-      overviewTitle:'✨ Vue d\'ensemble',
-      overviewLead:'Tout ce qui suit est aligné sur les constantes/mécaniques actuelles du jeu.',
-      overviewCol1:'Boucle de jeu',
-      overviewCol2:'Règles de progression',
-      overview1:['ARPG temps réel dans le navigateur, sauvegarde persistante, présence/chat multijoueur.','Donjons à étages avec montée de difficulté tous les 5 floors.','Checkpoints de ville au floor 5/10/15/... via téléporteur.'],
-      overview2:['Pénalité de mort: perte de 10% de l\'XP requise du niveau courant.','Si l\'XP tomberait à 0, la mort est évitée et le joueur survit avec peu de HP.','Le classement quotidien suit les kills par joueur chaque jour.'],
-      formTitle:'📐 Formules clés',
-      formCore:'Combat / Économie',
-      formZones:'Zones / Scaling',
-      formCoreList:['Palier: <code>floor((max(1,floor)-1)/5)</code>.','Niveau conseillé: <code>1 + tier*4</code>.','Nombre cible d\'ennemis: <code>min(14 + floor*2 + tier*3, 44)</code>.','Achat marchand: consommables x10, équipement x25 sur valeur de base.','Valeur de vente: <code>floor(item_value * 0.55)</code>.'],
-      formZoneList:['Le village contient guérisseur, marchand, téléporteur, garde.','Le donjon a escaliers montée/descente + tuile portail sur floors multiples de 5.','Town Portal: cast 3s, interrompu par mouvement/coup.'],
-      rarityTitle:'🎨 Multiplicateurs de rareté (exact)',
-      rarityHdr:['Rareté','Puissance (ATK/DEF/HP)','Valeur'],
-      rarityLabel:{common:'Commun',magic:'Magique',rare:'Rare',epic:'Épique'},
-      dropTitle:'🎁 Tables de drop',
-      dropLead:'Le roll de loot est à 12.5% à la mort d\'un ennemi, puis item tiré par pool de palier et rareté tirée selon la plage de floor.',
-      dropHdr:['Palier','Plage floors / zone','Pool d\'items','Probabilités (commun / magique / rare / épique)'],
-      shopTitle:'🛒 Paliers du marchand',
-      shopLead:'Le stock marchand dépend du floor max atteint. Les items vendus sont en rareté commune.',
-      shopHdr:['Palier','Condition','Stock'],
-      itemsTitle:'🧱 Catalogue complet des items (base/commun)',
-      itemsLead:'Les stats/valeurs finales = base × multiplicateurs de rareté. Les potions sont toujours communes dans la logique inventaire.',
-      itemsHdr:['Item','Slot','ATK','DEF','HP','Soin','Valeur base'],
-      enemyTitle:'👾 Référence des ennemis',
-      enemyHdr:['Ennemi','Zone','Modèle HP','Modèle ATK','Modèle XP','Modèle or','Notes'],
-      questTitle:'📜 Référence des quêtes',
-      questHdr:['ID','Quête','Objectif','Récompense'],
-      controlTitle:'🎮 Contrôles & notes',
-      controls:['PC: WASD/Flèches déplacement, Space/E attaque, P potion, T Town Portal.','Mobile: D-pad + ATK, tap-to-move + attaque, chat dans menu.','Cadence d\'attaque mêlée ~340ms.','Les attaques ennemies interrompent le cast portail.'],
-      slots:{weapon:'Arme',shield:'Bouclier',armor:'Armure',ring:'Anneau',consumable:'Consommable'}
-    }
-  };
-
-  const state = { lang: (localStorage.getItem('orson_lang_v1')||'en') === 'fr' ? 'fr' : 'en' };
-  const $ = (id) => document.getElementById(id);
-
-  function table(el, headers, rows){
-    el.innerHTML = `<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
-  }
-
-  function render(){
-    const t = i18n[state.lang];
-    document.documentElement.lang = state.lang;
-
-    $('langBtn').textContent = state.lang === 'fr' ? '🌐 EN' : '🌐 FR';
-    $('playBtn').textContent = t.play;
-    $('subtitle').textContent = t.subtitle;
-
-    $('chipCommon').textContent = t.rarityLabel.common;
-    $('chipMagic').textContent = t.rarityLabel.magic;
-    $('chipRare').textContent = t.rarityLabel.rare;
-    $('chipEpic').textContent = t.rarityLabel.epic;
-
-    $('tocTitle').textContent = t.toc;
-    ['toc1','toc2','toc3','toc4','toc5','toc6','toc7','toc8','toc9'].forEach((id, i)=> $(id).textContent = t.tocItems[i]);
-
-    $('overviewTitle').textContent = t.overviewTitle;
-    $('overviewLead').textContent = t.overviewLead;
-    $('overviewCol1').textContent = t.overviewCol1;
-    $('overviewCol2').textContent = t.overviewCol2;
-    $('overviewList1').innerHTML = t.overview1.map(x=>`<li>${x}</li>`).join('');
-    $('overviewList2').innerHTML = t.overview2.map(x=>`<li>${x}</li>`).join('');
-
-    $('formTitle').textContent = t.formTitle;
-    $('formCore').textContent = t.formCore;
-    $('formZones').textContent = t.formZones;
-    $('formCoreList').innerHTML = t.formCoreList.map(x=>`<li>${x}</li>`).join('');
-    $('formZoneList').innerHTML = t.formZoneList.map(x=>`<li>${x}</li>`).join('');
-
-    $('rarityTitle').textContent = t.rarityTitle;
-    table($('rarityTable'), t.rarityHdr, data.rarity.map(r=>[
-      `<span class="chip ${r.cls}">${t.rarityLabel[r.k]}</span>`,
-      `x${r.pow.toFixed(2)}`,
-      `x${r.val.toFixed(2)}`,
-    ]));
-
-    $('dropTitle').textContent = t.dropTitle;
-    $('dropLead').textContent = t.dropLead;
-    table($('dropTable'), t.dropHdr, data.lootPools.map((p, i)=>[
-      String(p.tier),
-      p.floors,
-      p.items.join(', '),
-      `${data.rarityOdds[i].common} / ${data.rarityOdds[i].magic} / ${data.rarityOdds[i].rare} / ${data.rarityOdds[i].epic}`
-    ]));
-
-    $('shopTitle').textContent = t.shopTitle;
-    $('shopLead').textContent = t.shopLead;
-    table($('shopTable'), t.shopHdr, data.shopTiers.map(s=>[
-      String(s.tier),
-      s.unlock,
-      s.items.join(', ')
-    ]));
-
-    $('itemsTitle').textContent = t.itemsTitle;
-    $('itemsLead').textContent = t.itemsLead;
-    table($('itemsTable'), t.itemsHdr, data.items.map(it=>[
-      it.n,
-      t.slots[it.s] || it.s,
-      String(it.atk),
-      String(it.def),
-      String(it.hp),
-      String(it.heal),
-      String(it.v)
-    ]));
-
-    $('enemyTitle').textContent = t.enemyTitle;
-    table($('enemyTable'), t.enemyHdr, data.enemies.map(e=>[
-      e.e,e.z,e.hp,e.atk,e.xp,e.g,e.note
-    ]));
-
-    $('questTitle').textContent = t.questTitle;
-    table($('questTable'), t.questHdr, data.quests.map(q=>[
-      q.id,q.q,q.o,q.r
-    ]));
-
-    $('controlTitle').textContent = t.controlTitle;
-    $('controlList').innerHTML = t.controls.map(x=>`<li>${x}</li>`).join('');
-  }
-
-  $('langBtn').addEventListener('click', ()=>{
-    state.lang = state.lang === 'fr' ? 'en' : 'fr';
-    localStorage.setItem('orson_lang_v1', state.lang);
-    render();
-  });
-
-  render();
-})();
-</script>
 </body>
 </html>

@@ -40,6 +40,7 @@ BLOG_ARTICLE_FILES = {
     'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
     'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
 }
+GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.21.0').strip() or '0.21.0'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -317,6 +318,15 @@ def _sec_db() -> sqlite3.Connection:
         )
         '''
     )
+    cur.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS game_retired_guests (
+            guest_key TEXT PRIMARY KEY,
+            retired_to_user_key TEXT NOT NULL DEFAULT '',
+            retired_at TEXT NOT NULL
+        )
+        '''
+    )
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_profiles_rank ON game_profiles(level DESC, gold DESC, max_floor DESC, updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_chat_created ON game_chat_messages(created_at DESC, id DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_guest_links_guest ON game_guest_links(guest_key, expires_at DESC)')
@@ -324,6 +334,7 @@ def _sec_db() -> sqlite3.Connection:
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_daily_kills_day ON game_daily_kills(day_key, kills DESC, updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_guest_ip_daily_day_ip ON game_guest_ip_daily(day_key, ip, updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_floor_instances_zone_floor ON game_floor_instances(zone, floor, updated_at DESC)')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_game_retired_guests_time ON game_retired_guests(retired_at DESC)')
     con.commit()
     _SEC_DB_SCHEMA_READY = True
     return con
@@ -366,7 +377,7 @@ def _auth_session_user(sid: str) -> dict | None:
     return dict(row)
 
 
-def _game_identity(request: Request, guest_id: str | None = None) -> tuple[str, str, bool]:
+def _game_identity(request: Request, guest_id: str | None = None, *, strict_guest: bool = False) -> tuple[str, str, bool]:
     sid = request.cookies.get(_auth_cookie_name(), '')
     user = _auth_session_user(sid)
     if user and user.get('user_id'):
@@ -386,6 +397,8 @@ def _game_identity(request: Request, guest_id: str | None = None) -> tuple[str, 
         return (user_key, name[:120], True)
     gid = re.sub(r'[^a-zA-Z0-9_-]', '', str(guest_id or '').strip())[:80]
     if not gid:
+        if strict_guest:
+            raise HTTPException(status_code=400, detail='guest_id required')
         gid = 'guest'
     gname = _safe_display_name(f'Guest-{gid[:8]}')
     return (f'guest:{gid}', gname, False)
@@ -397,6 +410,28 @@ def _game_client_session(payload: dict | None) -> str:
     if raw:
         return raw
     return f'legacy-{secrets.token_hex(6)}'
+
+
+def _is_retired_guest(cur: sqlite3.Cursor, user_key: str) -> bool:
+    if not str(user_key or '').startswith('guest:'):
+        return False
+    cur.execute('SELECT 1 FROM game_retired_guests WHERE guest_key=? LIMIT 1', (str(user_key),))
+    return bool(cur.fetchone())
+
+
+def _retire_guest_key(cur: sqlite3.Cursor, guest_key: str, user_key: str, now_iso: str) -> None:
+    if not str(guest_key or '').startswith('guest:'):
+        return
+    cur.execute(
+        '''
+        INSERT INTO game_retired_guests(guest_key, retired_to_user_key, retired_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(guest_key) DO UPDATE SET
+            retired_to_user_key=excluded.retired_to_user_key,
+            retired_at=excluded.retired_at
+        ''',
+        (str(guest_key), str(user_key), str(now_iso)),
+    )
 
 
 def _game_touch_active_session(cur: sqlite3.Cursor, user_key: str, client_session: str, *, force_claim: bool = False, ttl_sec: int = 120) -> bool:
@@ -672,6 +707,31 @@ def game_wiki_page():
     return FileResponse(str(STATIC_DIR / 'game-wiki.html'))
 
 
+@app.get('/wiki/items')
+def game_wiki_items_page():
+    return FileResponse(str(STATIC_DIR / 'game-wiki-items.html'))
+
+
+@app.get('/wiki/enemies')
+def game_wiki_enemies_page():
+    return FileResponse(str(STATIC_DIR / 'game-wiki-enemies.html'))
+
+
+@app.get('/wiki/formulas')
+def game_wiki_formulas_page():
+    return FileResponse(str(STATIC_DIR / 'game-wiki-formulas.html'))
+
+
+@app.get('/wiki/progression')
+def game_wiki_progression_page():
+    return FileResponse(str(STATIC_DIR / 'game-wiki-progression.html'))
+
+
+@app.get('/wiki/changelog')
+def game_wiki_changelog_page():
+    return FileResponse(str(STATIC_DIR / 'game-wiki-changelog.html'))
+
+
 @app.get('/wiki/blog')
 def game_blog_page():
     return FileResponse(str(STATIC_DIR / 'game-blog.html'))
@@ -701,8 +761,13 @@ def robots_txt():
 
 @app.get('/api/game/me')
 def game_me(request: Request, guest_id: str = ''):
-    user_key, display_name, logged = _game_identity(request, guest_id=guest_id)
+    user_key, display_name, logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
     return {'ok': True, 'logged_in': bool(logged), 'user_key': user_key, 'display_name': display_name}
+
+
+@app.get('/api/game/version')
+def game_version():
+    return {'ok': True, 'version': GAME_VERSION}
 
 
 @app.post('/api/game/profile/name')
@@ -766,9 +831,12 @@ def game_profile_name_set(request: Request, payload: dict = Body(...)):
 
 @app.get('/api/game/save')
 def game_save_get(request: Request, guest_id: str = ''):
-    user_key, display_name, logged = _game_identity(request, guest_id=guest_id)
+    user_key, display_name, logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
     con = _sec_db()
     cur = con.cursor()
+    if _is_retired_guest(cur, user_key):
+        con.close()
+        return {'ok': False, 'reason': 'guest_retired'}
     cur.execute('SELECT save_json, updated_at FROM game_saves WHERE user_key=? LIMIT 1', (user_key,))
     row = cur.fetchone()
     con.close()
@@ -784,7 +852,7 @@ def game_save_get(request: Request, guest_id: str = ''):
 @app.post('/api/game/save')
 def game_save_set(request: Request, payload: dict = Body(...)):
     guest_id = str(payload.get('guest_id') or '')
-    user_key, display_name, _logged = _game_identity(request, guest_id=guest_id)
+    user_key, display_name, _logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
     client_session = _game_client_session(payload)
     force_claim = bool(payload.get('force_claim'))
     save = payload.get('save') if isinstance(payload.get('save'), dict) else {}
@@ -807,6 +875,9 @@ def game_save_set(request: Request, payload: dict = Body(...)):
 
     con = _sec_db()
     cur = con.cursor()
+    if _is_retired_guest(cur, user_key):
+        con.close()
+        return {'ok': False, 'reason': 'guest_retired'}
     _enforce_guest_identity_quota(request, cur, user_key)
     if not _game_touch_active_session(cur, user_key, client_session, force_claim=force_claim, ttl_sec=120):
         con.commit(); con.close()
@@ -891,6 +962,7 @@ def game_claim_guest_save(request: Request, payload: dict = Body(...)):
     except Exception: user_save = {}
 
     if _score(guest_save) <= _score(user_save):
+        _retire_guest_key(cur, guest_key, user_key, datetime.now(timezone.utc).isoformat())
         cur.execute('DELETE FROM game_saves WHERE user_key=?', (guest_key,))
         cur.execute('DELETE FROM game_profiles WHERE user_key=?', (guest_key,))
         con.commit(); con.close()
@@ -935,6 +1007,7 @@ def game_claim_guest_save(request: Request, payload: dict = Body(...)):
         (user_key, display_name, lvl, gold, max_floor, kills, quests_done, now_iso, now_iso),
     )
     _game_track_daily_kills(cur, user_key, display_name, previous_kills, kills)
+    _retire_guest_key(cur, guest_key, user_key, now_iso)
     cur.execute('DELETE FROM game_saves WHERE user_key=?', (guest_key,))
     cur.execute('DELETE FROM game_profiles WHERE user_key=?', (guest_key,))
     con.commit(); con.close()
@@ -1048,6 +1121,7 @@ def game_claim_guest_link(request: Request, payload: dict = Body(...)):
         _game_track_daily_kills(cur, user_key, display_name, previous_kills, kills)
         claimed = True
 
+    _retire_guest_key(cur, guest_key, user_key, now_iso)
     cur.execute('DELETE FROM game_saves WHERE user_key=?', (guest_key,))
     cur.execute('DELETE FROM game_profiles WHERE user_key=?', (guest_key,))
     cur.execute('UPDATE game_guest_links SET used_at=?, used_by_user_key=? WHERE code=?', (now_iso, user_key, code))
@@ -1058,7 +1132,7 @@ def game_claim_guest_link(request: Request, payload: dict = Body(...)):
 @app.post('/api/game/presence/update')
 def game_presence_update(request: Request, payload: dict = Body(...)):
     guest_id = str(payload.get('guest_id') or '')
-    user_key, display_name, _logged = _game_identity(request, guest_id=guest_id)
+    user_key, display_name, _logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
     client_session = _game_client_session(payload)
     force_claim = bool(payload.get('force_claim'))
     zone = str(payload.get('zone') or 'village')[:40]
@@ -1070,6 +1144,9 @@ def game_presence_update(request: Request, payload: dict = Body(...)):
     attack_at = max(0, int(payload.get('attack_at') or 0))
     now_iso = datetime.now(timezone.utc).isoformat()
     con = _sec_db(); cur = con.cursor()
+    if _is_retired_guest(cur, user_key):
+        con.close()
+        return {'ok': False, 'reason': 'guest_retired'}
     _enforce_guest_identity_quota(request, cur, user_key)
     if not _game_touch_active_session(cur, user_key, client_session, force_claim=force_claim, ttl_sec=120):
         con.commit(); con.close(); return {'ok': False, 'conflict': True, 'reason': 'active_elsewhere'}
@@ -1099,7 +1176,7 @@ def game_presence_update(request: Request, payload: dict = Body(...)):
 @app.post('/api/game/presence/clear')
 def game_presence_clear(request: Request, payload: dict = Body(...)):
     guest_id = str(payload.get('guest_id') or '')
-    user_key, _display_name, _logged = _game_identity(request, guest_id=guest_id)
+    user_key, _display_name, _logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
     client_session = _game_client_session(payload)
     con = _sec_db(); cur = con.cursor()
     cur.execute('DELETE FROM game_presence WHERE user_key=?', (user_key,))
@@ -1110,7 +1187,7 @@ def game_presence_clear(request: Request, payload: dict = Body(...)):
 
 @app.get('/api/game/presence/list')
 def game_presence_list(request: Request, guest_id: str = '', zone: str = 'village', floor: int = 0, limit: int = 60):
-    user_key, _display_name, _logged = _game_identity(request, guest_id=guest_id)
+    user_key, _display_name, _logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
     lim = max(1, min(int(limit or 60), 200))
     z = str(zone or 'village')[:40]
     fl = max(0, min(int(floor or 0), 999))
@@ -1137,13 +1214,16 @@ def game_presence_list(request: Request, guest_id: str = '', zone: str = 'villag
 @app.post('/api/game/instance/sync')
 def game_instance_sync(request: Request, payload: dict = Body(...)):
     guest_id = str(payload.get('guest_id') or '')
-    user_key, _display_name, _logged = _game_identity(request, guest_id=guest_id)
+    user_key, _display_name, _logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
     z = str(payload.get('zone') or 'village').strip().lower()[:40]
     fl = max(0, min(int(payload.get('floor') or 0), 999))
     incoming = payload.get('enemies') if isinstance(payload.get('enemies'), list) else []
 
     con = _sec_db()
     cur = con.cursor()
+    if _is_retired_guest(cur, user_key):
+        con.close()
+        return {'ok': False, 'reason': 'guest_retired'}
     _enforce_guest_identity_quota(request, cur, user_key)
     state = _instance_load(cur, z, fl)
     current = state.get('enemies') if isinstance(state.get('enemies'), list) else []
@@ -1190,7 +1270,7 @@ def game_instance_sync(request: Request, payload: dict = Body(...)):
 @app.post('/api/game/chat/send')
 def game_chat_send(request: Request, payload: dict = Body(...)):
     guest_id = str(payload.get('guest_id') or '')
-    user_key, display_name, _logged = _game_identity(request, guest_id=guest_id)
+    user_key, display_name, _logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
     msg = str(payload.get('message') or '').strip()
     if not msg:
         raise HTTPException(status_code=400, detail='message required')
@@ -1199,6 +1279,9 @@ def game_chat_send(request: Request, payload: dict = Body(...)):
         msg = re.sub(re.escape(w), '*' * len(w), msg, flags=re.IGNORECASE)
     now_iso = datetime.now(timezone.utc).isoformat()
     con = _sec_db(); cur = con.cursor()
+    if _is_retired_guest(cur, user_key):
+        con.close()
+        return {'ok': False, 'reason': 'guest_retired'}
     _enforce_guest_identity_quota(request, cur, user_key)
     cur.execute('INSERT INTO game_chat_messages(user_key, display_name, message, created_at) VALUES (?, ?, ?, ?)', (user_key, display_name[:120], msg, now_iso))
     con.commit(); con.close()

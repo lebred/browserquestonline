@@ -17,8 +17,10 @@
     .actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
     .btn{border:1px solid #3e63a0;background:var(--btn2);color:#ecf3ff;padding:6px 8px;border-radius:10px;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:12px}
     .btn.primary{background:linear-gradient(180deg,#2f6cd0,#2256ae)}
+    .version-chip{font-size:11px;color:#b6caea;background:rgba(16,29,54,.68);border:1px solid rgba(110,150,210,.4);padding:4px 7px;border-radius:999px}
 
     .status{position:absolute;top:44px;left:6px;z-index:19;padding:6px 8px;background:var(--glass);min-width:200px;max-width:min(90vw,300px);pointer-events:none}
+    #app.hud-right .status{left:auto;right:6px}
     .k{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
     .v{font-weight:800}
     .row{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
@@ -129,6 +131,8 @@
         max-height:none;
       }
       .chat-ticker{bottom:6px;width:min(94vw,760px)}
+      #app.hud-left .status{left:6px;right:auto}
+      #app.hud-right .status{left:auto;right:6px}
     }
   </style>
 </head>
@@ -144,6 +148,7 @@
       <button class="btn" id="townPortalBtn">🌀 Town Portal</button>
       <button class="btn" id="audioBtn">🔇 Sound</button>
       <a class="btn primary" id="googleBtn" href="/api/game/auth/google/start?next_path=/game">🔐 Google</a>
+      <span class="version-chip" id="versionChip">v0.0.0</span>
     </div>
   </div>
 
@@ -158,6 +163,7 @@
     <div class="panel-head">
       <div class="k" id="menuTitle">Menu</div>
       <div style="display:flex;align-items:center;gap:6px">
+        <button class="btn" id="hudSideBtn" type="button">🖐️ Right-handed</button>
         <button class="btn" id="logoutBtn" type="button" style="display:none">🚪 Logout</button>
         <button class="btn" id="langBtn" type="button">🌐 EN</button>
         <button class="panel-close" id="panelCloseBtn" type="button">✕</button>
@@ -270,12 +276,22 @@
   function createGuestId(){
     return Math.random().toString(36).slice(2,12)+Date.now().toString(36).slice(-4);
   }
+  function ensureGuestId(){
+    guestId = String(guestId || '').trim();
+    if(!guestId){
+      guestId = createGuestId();
+      localStorage.setItem('orson_guest_id_v1', guestId);
+    }
+    return guestId;
+  }
   let guestId = localStorage.getItem('orson_guest_id_v1') || '';
   if(!guestId){ guestId = createGuestId(); localStorage.setItem('orson_guest_id_v1', guestId); }
   const GUEST_LINK_CODE_KEY = 'orson_guest_link_code_v1';
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
+  const GAME_VERSION = '0.21.0';
+  const CHANGELOG_PATH = '/wiki/changelog';
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
@@ -284,28 +300,45 @@
     'Lame runique': {slot:'weapon',atk:10,def:1,hp:4,value:180},
     'Épée draconique': {slot:'weapon',atk:15,def:2,hp:8,value:320},
     'Claymore abyssale': {slot:'weapon',atk:21,def:4,hp:16,value:680},
+    'Lame du néant': {slot:'weapon',atk:29,def:6,hp:26,value:1180},
+    'Espadon astral': {slot:'weapon',atk:38,def:8,hp:36,value:1850},
+    'Brise-comète': {slot:'weapon',atk:49,def:11,hp:52,value:2850},
     'Bouclier en bois': {slot:'shield',atk:0,def:2,hp:8,value:35},
     'Bouclier renforcé': {slot:'shield',atk:0,def:4,hp:16,value:78},
     'Bouclier runique': {slot:'shield',atk:0,def:7,hp:26,value:190},
     'Égide antique': {slot:'shield',atk:1,def:10,hp:36,value:340},
     'Rempart céleste': {slot:'shield',atk:2,def:15,hp:58,value:720},
+    'Bastion du néant': {slot:'shield',atk:3,def:20,hp:78,value:1320},
+    'Mur astral': {slot:'shield',atk:4,def:26,hp:104,value:2050},
+    'Citadelle éternelle': {slot:'shield',atk:6,def:34,hp:138,value:3120},
     'Bottes légères': {slot:'boots',atk:0,def:1,hp:0,ms:0.02,value:18},
     'Bottes du pisteur': {slot:'boots',atk:0,def:2,hp:6,ms:0.04,value:80},
     'Bottes runiques': {slot:'boots',atk:1,def:4,hp:12,ms:0.06,value:210},
     'Bottes du néant': {slot:'boots',atk:2,def:7,hp:20,ms:0.09,value:420},
     'Bottes astrales': {slot:'boots',atk:3,def:10,hp:30,ms:0.12,value:760},
+    'Bottes du vortex': {slot:'boots',atk:4,def:13,hp:42,ms:0.15,value:1380},
+    'Bottes stellaires': {slot:'boots',atk:5,def:17,hp:56,ms:0.18,value:2140},
+    'Bottes des anciens': {slot:'boots',atk:7,def:22,hp:72,ms:0.22,value:3250},
     'Tunique renforcée': {slot:'armor',atk:0,def:3,hp:12,value:60},
     'Armure du gardien': {slot:'armor',atk:0,def:8,hp:34,value:220},
     'Armure de dragon': {slot:'armor',atk:2,def:12,hp:52,value:390},
     'Armure du titan': {slot:'armor',atk:4,def:18,hp:84,value:780},
+    'Carapace abyssale': {slot:'armor',atk:6,def:24,hp:112,value:1460},
+    'Égide stellaire': {slot:'armor',atk:8,def:31,hp:146,value:2260},
+    'Armure des anciens': {slot:'armor',atk:11,def:40,hp:190,value:3420},
     'Amulette terne': {slot:'ring',atk:0,def:0,hp:10,value:26},
     'Anneau d\'acier': {slot:'ring',atk:1,def:1,hp:6,value:54},
     'Anneau runique': {slot:'ring',atk:3,def:2,hp:16,value:210},
     'Anneau du phénix': {slot:'ring',atk:5,def:4,hp:26,value:360},
     'Anneau du vide': {slot:'ring',atk:8,def:6,hp:40,value:790},
+    'Anneau cosmique': {slot:'ring',atk:11,def:8,hp:56,value:1490},
+    'Anneau du crépuscule': {slot:'ring',atk:14,def:11,hp:74,value:2320},
+    'Anneau mythique': {slot:'ring',atk:18,def:14,hp:98,value:3550},
     'Potion HP': {slot:'consumable',atk:0,def:0,hp:0,heal:25,value:16},
     'Potion HP++': {slot:'consumable',atk:0,def:0,hp:0,heal:80,value:85},
     'Potion HP+++': {slot:'consumable',atk:0,def:0,hp:0,heal:160,value:220},
+    'Potion HP++++': {slot:'consumable',atk:0,def:0,hp:0,heal:320,value:480},
+    'Potion HP+++++': {slot:'consumable',atk:0,def:0,hp:0,heal:520,value:900},
   };
   const ITEM_LABELS = {
     en:{
@@ -315,28 +348,45 @@
       'Lame runique':'Runic Blade',
       'Épée draconique':'Draconic Sword',
       'Claymore abyssale':'Abyssal Claymore',
+      'Lame du néant':'Voidblade',
+      'Espadon astral':'Astral Greatsword',
+      'Brise-comète':'Cometbreaker',
       'Bouclier en bois':'Wooden Shield',
       'Bouclier renforcé':'Reinforced Shield',
       'Bouclier runique':'Runic Shield',
       'Égide antique':'Ancient Aegis',
       'Rempart céleste':'Celestial Bulwark',
+      'Bastion du néant':'Void Bastion',
+      'Mur astral':'Astral Wall',
+      'Citadelle éternelle':'Eternal Citadel',
       'Bottes légères':'Light Boots',
       'Bottes du pisteur':'Tracker Boots',
       'Bottes runiques':'Runic Boots',
       'Bottes du néant':'Void Boots',
       'Bottes astrales':'Astral Boots',
+      'Bottes du vortex':'Vortex Boots',
+      'Bottes stellaires':'Stellar Boots',
+      'Bottes des anciens':'Ancients Boots',
       'Tunique renforcée':'Reinforced Tunic',
       'Armure du gardien':'Guardian Armor',
       'Armure de dragon':'Dragon Armor',
       'Armure du titan':'Titan Armor',
+      'Carapace abyssale':'Abyssal Carapace',
+      'Égide stellaire':'Stellar Aegis Armor',
+      'Armure des anciens':'Armor of the Ancients',
       'Amulette terne':'Faded Amulet',
       'Anneau d\'acier':'Steel Ring',
       'Anneau runique':'Runic Ring',
       'Anneau du phénix':'Phoenix Ring',
       'Anneau du vide':'Void Ring',
+      'Anneau cosmique':'Cosmic Ring',
+      'Anneau du crépuscule':'Dusk Ring',
+      'Anneau mythique':'Mythic Ring',
       'Potion HP':'HP Potion',
       'Potion HP++':'HP Potion++',
       'Potion HP+++':'HP Potion+++',
+      'Potion HP++++':'HP Potion++++',
+      'Potion HP+++++':'HP Potion+++++',
     },
     fr:{},
   };
@@ -524,6 +574,9 @@
     if(f>=5){ pMagic=0.07; pRare=0.011; pEpic=0.0006; }
     if(f>=10){ pMagic=0.09; pRare=0.018; pEpic=0.0012; }
     if(f>=15){ pMagic=0.11; pRare=0.028; pEpic=0.0024; }
+    if(f>=21){ pMagic=0.13; pRare=0.042; pEpic=0.0050; }
+    if(f>=31){ pMagic=0.16; pRare=0.060; pEpic=0.0100; }
+    if(f>=41){ pMagic=0.18; pRare=0.082; pEpic=0.0180; }
     const r = Math.random();
     if(r < pEpic) return 'epic';
     if(r < pEpic + pRare) return 'rare';
@@ -536,6 +589,10 @@
     ['Lame runique','Bouclier runique','Bottes runiques','Armure du gardien','Anneau runique','Potion HP++'],
     ['Épée draconique','Égide antique','Bottes du néant','Armure de dragon','Anneau du phénix','Potion HP++'],
     ['Claymore abyssale','Rempart céleste','Bottes astrales','Armure du titan','Anneau du vide','Potion HP++','Potion HP+++'],
+    ['Lame du néant','Bastion du néant','Bottes du vortex','Carapace abyssale','Anneau cosmique','Potion HP+++','Potion HP++++'],
+    ['Espadon astral','Mur astral','Bottes stellaires','Égide stellaire','Anneau du crépuscule','Potion HP+++','Potion HP++++'],
+    ['Brise-comète','Citadelle éternelle','Bottes des anciens','Armure des anciens','Anneau mythique','Potion HP++++','Potion HP+++++'],
+    ['Brise-comète','Citadelle éternelle','Bottes des anciens','Armure des anciens','Anneau mythique','Potion HP++++','Potion HP+++++'],
   ];
   const QUESTS = [
     {id:'q_rat_hunt',title:'Rat Hunter',metric:'rat_kills',target:5,reward:{gold:25,xp:20}},
@@ -569,6 +626,7 @@
     forceSessionClaimOnce:false,
     audioOn:false,audioCtx:null,audioTimer:null,audioThemeKey:'',
     lang:(localStorage.getItem('orson_lang_v1')||'en')==='fr'?'fr':'en',
+    hudSide:(localStorage.getItem('orson_hud_side_v1')||'left')==='right'?'right':'left',
   };
   const I18N = {
     en:{
@@ -603,6 +661,7 @@
       sessionConflictTitle:'⚠️ Session active elsewhere',
       sessionConflictText:'Your account is active on another device. Click to resume here.',
       sessionReconnect:'Resume here',
+      guestRetired:'This guest profile was migrated to Google. A fresh guest profile was created.',
       merchantPanel:'Open the merchant panel.',
       checkpointLocked:'Checkpoint not unlocked.',
       backVillage:'Back to village.',
@@ -648,6 +707,9 @@
       renameCost:'Cost: 10000 gold',
       renameCancel:'Cancel',
       renameConfirm:'Confirm',
+      hudRight:'🖐️ Right-handed',
+      hudLeft:'✋ Left-handed',
+      versionLabel:'Version',
     },
     fr:{
       menu:'Menu', gear:'Équipement', quests:'Quêtes', bags:'Inventaire', shop:'Marchand', rank:'Classement', log:'Journal',
@@ -681,6 +743,7 @@
       sessionConflictTitle:'⚠️ Session active ailleurs',
       sessionConflictText:'Votre compte est actif sur un autre appareil. Cliquez pour reprendre ici.',
       sessionReconnect:'Reprendre ici',
+      guestRetired:'Ce profil visiteur a été migré vers Google. Un nouveau profil visiteur a été créé.',
       merchantPanel:'Ouvre le panel du marchand.',
       checkpointLocked:'Checkpoint non débloqué.',
       backVillage:'Retour au village.',
@@ -726,6 +789,9 @@
       renameCost:'Coût: 10000 or',
       renameCancel:'Annuler',
       renameConfirm:'Confirmer',
+      hudRight:'🖐️ Droitier',
+      hudLeft:'✋ Gaucher',
+      versionLabel:'Version',
     },
   };
   const tr=(k)=> (I18N[state.lang]&&I18N[state.lang][k]) || (I18N.en[k]||k);
@@ -757,6 +823,13 @@
   function ensureQuests(){ if(!Array.isArray(state.quests)||!state.quests.length) state.quests=QUESTS.map(q=>({id:q.id,done:false})); }
   function log(msg){ const line=`[${new Date().toLocaleTimeString()}] ${msg}`; state.logs.unshift(line); if(state.logs.length>120) state.logs.length=120; panes.log.innerHTML=state.logs.map(x=>`<div>${x}</div>`).join(''); }
   function showDialog(msg,ms=2600){ dialog.textContent=msg; dialog.classList.add('show'); clearTimeout(showDialog._t); showDialog._t=setTimeout(()=>dialog.classList.remove('show'),ms); }
+  function applyHudSide(){
+    const app = document.getElementById('app');
+    if(!app) return;
+    app.classList.remove('hud-left','hud-right');
+    app.classList.add(state.hudSide === 'right' ? 'hud-right' : 'hud-left');
+    localStorage.setItem('orson_hud_side_v1', state.hudSide);
+  }
   function applyLanguage(){
     const b = document.getElementById('langBtn');
     if(b) b.textContent = `🌐 ${state.lang.toUpperCase()}`;
@@ -792,6 +865,10 @@
     if(renameCancelBtn) renameCancelBtn.textContent = tr('renameCancel');
     if(renameConfirmBtn) renameConfirmBtn.textContent = tr('renameConfirm');
     if(renameInput) renameInput.placeholder = state.lang==='fr' ? 'Nouveau pseudo' : 'New nickname';
+    const hudBtn = document.getElementById('hudSideBtn');
+    if(hudBtn) hudBtn.textContent = state.hudSide === 'right' ? tr('hudLeft') : tr('hudRight');
+    const vchip = document.getElementById('versionChip');
+    if(vchip) vchip.textContent = `v${GAME_VERSION}`;
     const t1=chatTicker?.querySelectorAll('.line')[0]; const t2=chatTicker?.querySelectorAll('.line')[1];
     if(t1) t1.textContent = `💬 ${tr('chatWelcome1')}`;
     if(t2) t2.textContent = `💬 ${tr('chatWelcome2')}`;
@@ -987,6 +1064,7 @@
   }
 
   async function resetToFreshGuestProfile(regenerateGuest=true){
+    ensureGuestId();
     if(regenerateGuest){
       guestId = createGuestId();
       localStorage.setItem('orson_guest_id_v1', guestId);
@@ -1190,7 +1268,8 @@
   function desiredEnemyCount(){
     const tier = floorTier(state.floor||1);
     if(state.zone==='village') return 6;
-    return Math.min(14 + state.floor*2 + (tier*3), 44);
+    const cap = Number(state.floor||1) >= 41 ? 64 : 52;
+    return Math.min(14 + state.floor*2 + (tier*3), cap);
   }
   function makeEnemyAt(ex, ey, i=0){
     const tier = floorTier(state.floor||1);
@@ -1216,6 +1295,18 @@
           atk += 15 + Math.floor(state.floor * 0.95);
           xp = Math.max(Math.floor(xp * 4.9), 160 + Math.floor(state.floor * 12));
           gold += 60 + rng(85);
+        } else if(Number(state.floor||1) >= 31 && Math.random() < 0.22){
+          kind = 'archon';
+          hp = Math.floor(base * 9.8);
+          atk += 22 + Math.floor(state.floor * 1.25);
+          xp = Math.max(Math.floor(xp * 6.1), 280 + Math.floor(state.floor * 16));
+          gold += 110 + rng(120);
+        } else if(Number(state.floor||1) >= 41 && Math.random() < 0.26){
+          kind = 'titan';
+          hp = Math.floor(base * 18.0);
+          atk += 34 + Math.floor(state.floor * 1.7);
+          xp = Math.max(Math.floor(xp * 10.2), 520 + Math.floor(state.floor * 26));
+          gold += 190 + rng(190);
         } else if(tier >= 2 && Math.random() < 0.5){
           kind = 'dragon';
           hp = Math.floor(base * 4.6);
@@ -1235,6 +1326,12 @@
         atk += 2 + Math.floor(state.floor / 2);
         xp = Math.floor(xp * 2.0);
         gold += 8 + rng(12);
+      } else if(Number(state.floor||1) >= 31 && Math.random() < 0.18){
+        kind = 'ogre';
+        hp = Math.floor(base * 4.2);
+        atk += 8 + Math.floor(state.floor * 0.45);
+        xp = Math.floor(xp * 2.8);
+        gold += 20 + rng(24);
       }
     }
     let element = '';
@@ -1832,6 +1929,10 @@
         ['Potion HP++','Lame runique','Bouclier runique','Armure du gardien','Anneau runique'],
         ['Potion HP++','Épée draconique','Égide antique','Armure de dragon','Anneau du phénix'],
         ['Potion HP++','Potion HP+++','Claymore abyssale','Rempart céleste','Bottes astrales','Armure du titan','Anneau du vide'],
+        ['Potion HP+++','Potion HP++++','Lame du néant','Bastion du néant','Bottes du vortex','Carapace abyssale','Anneau cosmique'],
+        ['Potion HP+++','Potion HP++++','Espadon astral','Mur astral','Bottes stellaires','Égide stellaire','Anneau du crépuscule'],
+        ['Potion HP++++','Potion HP+++++','Brise-comète','Citadelle éternelle','Bottes des anciens','Armure des anciens','Anneau mythique'],
+        ['Potion HP++++','Potion HP+++++','Brise-comète','Citadelle éternelle','Bottes des anciens','Armure des anciens','Anneau mythique'],
       ];
       const pool = pools[Math.min(t, pools.length-1)];
       const itemName=pool[rng(pool.length)];
@@ -2287,6 +2388,7 @@
   }
 
   async function updatePresence(){
+    ensureGuestId();
     try{
       const r = await fetch('/api/game/presence/update',{
         method:'POST',
@@ -2320,6 +2422,7 @@
   }
 
   async function refreshPresence(){
+    ensureGuestId();
     try{
       const q = new URLSearchParams({
         guest_id: state.auth.logged ? '' : guestId,
@@ -2382,6 +2485,7 @@
   }
 
   async function sendChat(msg){
+    ensureGuestId();
     const text = String(msg||'').trim().slice(0, CHAT_MAX_LEN);
     if(!text) return;
     try{
@@ -2835,6 +2939,7 @@
   }
 
   async function saveServer(){
+    ensureGuestId();
     try{
       const playerPersist = {
         x: state.player.x, y: state.player.y, hp: state.player.hp, hpMax: state.player.hpMax,
@@ -2851,6 +2956,11 @@
       })});
       state.forceSessionClaimOnce = false;
       const d = await r.json().catch(()=>({}));
+      if(d && d.reason === 'guest_retired' && !state.auth.logged){
+        await resetToFreshGuestProfile(true);
+        showDialog(tr('guestRetired'));
+        return;
+      }
       if(d && d.conflict){
         state.sessionConflict = true;
         sessionConflictModal?.classList.add('show');
@@ -2892,10 +3002,16 @@
   }
   function loadLocal(){ const raw=localStorage.getItem(state.saveKey); if(!raw) return false; try{ const ok=loadFromObj(JSON.parse(raw)); if(ok) log(tr('localLoaded')); return ok; }catch{return false;} }
   async function loadRemote(){
+    ensureGuestId();
     try{
       const gid=state.auth.logged?'':guestId;
       const r=await fetch(`/api/game/save?guest_id=${encodeURIComponent(gid)}`,{credentials:'include',cache:'no-store'});
       const d=await r.json();
+      if(d && d.reason === 'guest_retired' && !state.auth.logged){
+        await resetToFreshGuestProfile(true);
+        showDialog(tr('guestRetired'));
+        return false;
+      }
       if(!d?.ok||!d.save) return false;
       const ok=loadFromObj(d.save);
       if(ok) log(tr('serverLoaded'));
@@ -2905,8 +3021,9 @@
     }
   }
 
-  async function claimGuestToUser(){ try{ await fetch('/api/game/claim-guest',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({guest_id:guestId})}); }catch{} }
+  async function claimGuestToUser(){ ensureGuestId(); try{ await fetch('/api/game/claim-guest',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({guest_id:guestId})}); }catch{} }
   async function createGuestRecoveryLink(){
+    ensureGuestId();
     try{
       const r = await fetch('/api/game/link/create',{
         method:'POST',
@@ -2953,6 +3070,7 @@
   }
 
   async function loadAuth(){
+    ensureGuestId();
     try{
       const r = await fetch(`/api/game/me?guest_id=${encodeURIComponent(guestId)}`, {credentials:'include'});
       const d = await r.json();
@@ -3057,6 +3175,11 @@
     }
   }
   audioBtn.onclick=()=>toggleMusic();
+  document.getElementById('hudSideBtn').onclick=()=>{
+    state.hudSide = state.hudSide === 'right' ? 'left' : 'right';
+    applyHudSide();
+    applyLanguage();
+  };
   document.getElementById('langBtn').onclick=()=>toggleLanguage();
   document.getElementById('logoutBtn').onclick=async ()=>{
     if(!state.auth.logged) return;
@@ -3184,7 +3307,9 @@
 
   async function boot(){
     ensureQuests(); recalcStats(); updateViewMetrics();
+    applyHudSide();
     applyLanguage();
+    log(`🧩 ${tr('versionLabel')} v${GAME_VERSION} · ${CHANGELOG_PATH}`);
     setAudioBtn();
     state.view.camX=state.player.x-state.view.w/2; state.view.camY=state.player.y-state.view.h/2;
     switchZone('village',0);
