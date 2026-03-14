@@ -1,5 +1,10 @@
 # BrowserQuest Online Changelog
 
+## v0.21.6 - 2026-03-14
+- Added `Sell sidegrades` bulk action beside `Sell downgrades` in inventory.
+- Added Archon ranged projectile behavior in combat simulation.
+- Kept enemy and player combat loops aligned so ranged casters (dragon + archon) share range gating logic.
+
 ## v0.21.5 - 2026-03-14
 - Gave Archon enemies their own distinct visual design (no longer slime-like).
 - Journal kill lines now include enemy name plus XP and gold reward.

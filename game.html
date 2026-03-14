@@ -283,7 +283,7 @@
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
-  const GAME_VERSION = '0.21.5';
+  const GAME_VERSION = '0.21.6';
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
@@ -2234,6 +2234,26 @@
       showDialog(state.lang==='fr'?'Aucun downgrade à vendre.':'No downgrade items to sell.');
     }
   }
+  function sellAllSidegrades(){
+    if(!isNearRole('merchant',1.7)){ showDialog(tr('needMerchant')); return; }
+    let sold=0, gain=0;
+    for(let i=state.inv.length-1;i>=0;i--){
+      const raw = state.inv[i];
+      const it = itemData(raw);
+      if(!it || it.slot==='consumable') continue;
+      if(compareItemTrend(raw) !== 'same') continue;
+      const value = Math.max(1, Math.floor(Number(it.value||0) * 0.55));
+      gain += value;
+      sold += 1;
+      state.inv.splice(i,1);
+    }
+    if(sold>0){
+      state.player.gold += gain;
+      log(`💰 ${sold} ${state.lang==='fr'?'sidegrades vendus':'sidegrades sold'} (+${gain} ${tr('gold')})`);
+    } else {
+      showDialog(state.lang==='fr'?'Aucun sidegrade à vendre.':'No sidegrade items to sell.');
+    }
+  }
 
   function completeTownPortal(){
     state.portalCast.active = false;
@@ -2313,7 +2333,7 @@
     ensureQuests();
     panes.quests.innerHTML=QUESTS.map(q=>{ const s=state.quests.find(x=>x.id===q.id)||{done:false}; const cur=Number(state.metrics[q.metric]||0); return `<div>${s.done?'✅':'⬜'} ${q.title} <span style="color:var(--muted)">(${Math.min(cur,q.target)}/${q.target})</span></div>`; }).join('');
 
-    panes.bags.innerHTML=(`<div style="margin-bottom:8px"><button class="btn" data-sell-downgrades="1">${state.lang==='fr'?'Vendre tous les downgrades':'Sell all downgrades'}</button></div>`)+(state.inv.length?state.inv.map((raw,idx)=>{
+    panes.bags.innerHTML=(`<div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-sell-downgrades="1">${state.lang==='fr'?'Vendre les downgrades':'Sell downgrades'}</button><button class="btn" data-sell-sidegrades="1">${state.lang==='fr'?'Vendre les sidegrades':'Sell sidegrades'}</button></div>`)+(state.inv.length?state.inv.map((raw,idx)=>{
       const it=itemData(raw)||{slot:'misc',atk:0,def:0,hp:0,heal:0,rarity:'common',color:'#9fb2d8',name:String(raw)};
       const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.ms?` · SPD +${Math.round(Number(it.ms||0)*100)}%`:'')+(it.heal?` · Heal ${it.heal}`:'');
       const rarityChip = (it.slot==='consumable') ? '' : `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid ${it.color};color:${it.color};margin-left:6px">${rarityLabel(it.rarity)}</span>`;
@@ -2724,18 +2744,24 @@
         e.x+=(dx/d)*dt*moveSpeed;
         e.y+=(dy/d)*dt*moveSpeed;
       }
-      const atkRange = (e.kind==='dragon') ? 1.18 : (e.kind==='titan' ? 2.25 : ((e.kind==='brute'||e.kind==='ogre') ? 1.4 : 1.25));
-      if(e.kind==='dragon' && d<=6.4 && d>1.35){
+      const isRangedCaster = (e.kind==='dragon' || e.kind==='archon');
+      const atkRange = isRangedCaster ? 1.18 : (e.kind==='titan' ? 2.25 : ((e.kind==='brute'||e.kind==='ogre') ? 1.4 : 1.25));
+      if(isRangedCaster && d<=6.4 && d>1.35){
         e.projCd = Number(e.projCd||0) - dt;
         if(e.projCd <= 0){
-          const vx = (dx/d) * 5.2;
-          const vy = (dy/d) * 5.2;
-          const color = e.element==='frost' ? '#89d6ff' : (e.element==='shadow' ? '#c69bff' : '#ff9b72');
-          state.enemyProjectiles.push({x:e.x,y:e.y,px:e.x,py:e.y,owner:e.id,vx,vy,life:1.45,color,dmg:Math.max(2,Math.floor(e.atk*0.55))});
-          e.projCd = 1.4 + Math.random()*0.8;
+          const speed = e.kind==='archon' ? 4.8 : 5.2;
+          const vx = (dx/d) * speed;
+          const vy = (dy/d) * speed;
+          const color = e.kind==='archon'
+            ? '#87b3ff'
+            : (e.element==='frost' ? '#89d6ff' : (e.element==='shadow' ? '#c69bff' : '#ff9b72'));
+          const dmgMult = e.kind==='archon' ? 0.62 : 0.55;
+          const life = e.kind==='archon' ? 1.62 : 1.45;
+          state.enemyProjectiles.push({x:e.x,y:e.y,px:e.x,py:e.y,owner:e.id,vx,vy,life,color,dmg:Math.max(2,Math.floor(e.atk*dmgMult))});
+          e.projCd = (e.kind==='archon' ? 1.08 : 1.4) + Math.random()*(e.kind==='archon' ? 0.62 : 0.8);
         }
       }
-      if(d<=atkRange && !(e.kind==='dragon' && d>1.35)){
+      if(d<=atkRange && !(isRangedCaster && d>1.35)){
         e.cd-=dt;
         if(e.cd<=0){
           const floorSpike = floorTier(state.floor||1) * 0.35;
@@ -2743,7 +2769,7 @@
           state.player.hp-=dmg;
           enemyDamagedPlayer = true;
           state.hurtFlash = Math.max(Number(state.hurtFlash||0), 0.12);
-          e.cd=(e.kind==='dragon') ? .78 : .95;
+          e.cd=isRangedCaster ? .78 : .95;
           e.atkFx=.22;
           e.atkDir=Math.atan2(dy,dx);
           log(`💥 ${e.kind} -${dmg}`);
@@ -3227,6 +3253,7 @@
   panel.addEventListener('click',(e)=>{
     const t=e.target;
     if(t instanceof HTMLElement && t.hasAttribute('data-sell-downgrades')){ sellAllDowngrades(); return; }
+    if(t instanceof HTMLElement && t.hasAttribute('data-sell-sidegrades')){ sellAllSidegrades(); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-use')){ const idx=Number(t.getAttribute('data-use')||-1); if(idx>=0) useItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-sell')){ const idx=Number(t.getAttribute('data-sell')||-1); if(idx>=0) sellItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-buy-index')){ const idx=Number(t.getAttribute('data-buy-index')||-1); const stock=shopStockForProgress(); if(idx>=0&&stock[idx]) buyItem(stock[idx]); return; }
