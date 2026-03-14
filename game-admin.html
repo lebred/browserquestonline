@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BrowserQuest Admin</title>
+  <style>
+    :root{--bg:#071225;--card:#0d1d3a;--line:#274b7f;--text:#ecf3ff;--muted:#9fb7dd;--ok:#38d39f}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(1000px 500px at 20% -10%,#1a3b73 0%,var(--bg) 60%);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text)}
+    .wrap{max-width:980px;margin:28px auto;padding:0 14px}
+    .card{background:rgba(13,29,58,.85);border:1px solid var(--line);border-radius:14px;padding:14px}
+    h1{margin:0 0 8px 0;font-size:28px}
+    .muted{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+    .kpi{background:rgba(8,17,34,.72);border:1px solid rgba(96,141,212,.45);border-radius:10px;padding:10px}
+    .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .v{font-size:24px;font-weight:700;margin-top:2px}
+    .meta{margin-top:10px;font-size:12px;color:var(--muted)}
+    .ok{color:var(--ok)}
+    @media (max-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>BrowserQuest Admin</h1>
+      <div class="muted" id="status">Loading analytics…</div>
+      <div class="grid" id="kpis"></div>
+      <div class="meta" id="meta"></div>
+    </div>
+  </div>
+  <script>
+    (async ()=>{
+      const statusEl = document.getElementById('status');
+      const kpisEl = document.getElementById('kpis');
+      const metaEl = document.getElementById('meta');
+      try{
+        const res = await fetch(`${location.pathname}/stats`, {credentials:'include'});
+        if(!res.ok){
+          statusEl.textContent = `Access denied (${res.status}).`;
+          return;
+        }
+        const j = await res.json();
+        if(!j?.ok){
+          statusEl.textContent = 'Stats unavailable.';
+          return;
+        }
+        const s = j.stats || {};
+        const rows = [
+          ['Active users (5m)', s.active_users_5m ?? 0],
+          ['Active sessions', s.active_sessions_2m ?? 0],
+          ['Profiles total', s.profiles_total ?? 0],
+          ['Registered users', s.users_total ?? 0],
+          ['Guest profiles', s.guests_total ?? 0],
+          ['Chat (24h)', s.chat_24h ?? 0],
+          ['Daily kills', s.daily_kills_total ?? 0],
+          ['Highest level', s.highest_level ?? 0],
+          ['Highest floor', s.highest_floor ?? 0],
+        ];
+        kpisEl.innerHTML = rows.map(([k,v])=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+        statusEl.innerHTML = `<span class="ok">Online</span> · Secret panel loaded successfully.`;
+        metaEl.textContent = `Game version ${s.version || '-'} · Generated at ${String(s.generated_at || '').replace('T',' ').replace('Z',' UTC')}`;
+      }catch(err){
+        statusEl.textContent = `Error: ${err?.message || err}`;
+      }
+    })();
+  </script>
+</body>
+</html>

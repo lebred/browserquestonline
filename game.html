@@ -283,7 +283,7 @@
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
-  const GAME_VERSION = '0.21.4';
+  const GAME_VERSION = '0.21.5';
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
@@ -630,7 +630,7 @@
       actionTeleporter:'Action: Teleporter',
       player:'Player', zone:'Zone', level:'Level', gold:'Gold', hp:'HP', xp:'XP',
       needMerchant:'Only possible when you are near the merchant.',
-      buy:'Buy', sell:'Sell', drop:'Drop', use:'Use',
+      buy:'Buy', sell:'Sell', use:'Use',
       equipped:'Equipped', weapon:'Weapon', shield:'Shield', armor:'Armor', boots:'Boots', ring:'Ring', none:'none',
       levelHint:'Recommended level',
       chatWelcome1:'Welcome to BrowserQuest Online.',
@@ -687,6 +687,7 @@
       dailyLeaderboard:'Daily Kills',
       globalLeaderboard:'Overall Leaderboard',
       killsToday:'kills today',
+      killMsg:'Defeated',
       deathPenalty:'Death penalty',
       deathAvoided:'Near death avoided',
       logoutConfirm:'Log out now? You will switch to a fresh visitor profile.',
@@ -710,7 +711,7 @@
       actionTeleporter:'Action: Téléporteur',
       player:'Joueur', zone:'Zone', level:'Niveau', gold:'Or', hp:'HP', xp:'XP',
       needMerchant:'Possible seulement quand vous êtes près du marchand.',
-      buy:'Acheter', sell:'Vendre', drop:'Jeter', use:'Utiliser',
+      buy:'Acheter', sell:'Vendre', use:'Utiliser',
       equipped:'Équipement', weapon:'Arme', shield:'Bouclier', armor:'Armure', boots:'Bottes', ring:'Anneau', none:'aucun',
       levelHint:'Niveau conseillé',
       chatWelcome1:'Bienvenue sur BrowserQuest Online.',
@@ -767,6 +768,7 @@
       dailyLeaderboard:'Classement quotidien',
       globalLeaderboard:'Classement global',
       killsToday:'kills aujourd\'hui',
+      killMsg:'Ennemi vaincu',
       deathPenalty:'Pénalité de mort',
       deathAvoided:'Mort évitée',
       logoutConfirm:'Se déconnecter maintenant? Vous passerez sur un nouveau profil visiteur.',
@@ -1704,6 +1706,33 @@
       if(f==='left'){ ctx.fillRect(sx-11,sy-8,3,3); ctx.fillRect(sx-5,sy-9,3,3); }
       else if(f==='right'){ ctx.fillRect(sx+8,sy-8,3,3); ctx.fillRect(sx+2,sy-9,3,3); }
       else { ctx.fillRect(sx-8,sy-9,3,3); ctx.fillRect(sx+5,sy-9,3,3); }
+    } else if(e.kind==='archon'){
+      const f = e.facing || 'down';
+      const pal = {body:'#2a2f46',robe:'#394a7b',trim:'#98b7ff',eye:'#e8f3ff',staff:'#7b5a34',orb:'#74d8ff'};
+      const body = e.hitFx>0 ? '#dbe5ff' : pal.body;
+      const robe = e.hitFx>0 ? '#b5c9ff' : pal.robe;
+      ctx.fillStyle = body;
+      ctx.fillRect(sx-10, sy-15, 20, 22);
+      ctx.fillStyle = robe;
+      ctx.fillRect(sx-12, sy-2, 24, 14);
+      ctx.fillStyle = pal.trim;
+      ctx.fillRect(sx-8, sy+6, 16, 2);
+      ctx.fillStyle = '#121a2e';
+      if(f==='left'){ ctx.fillRect(sx-6,sy-10,2,2); ctx.fillRect(sx-2,sy-10,2,2); }
+      else if(f==='right'){ ctx.fillRect(sx+2,sy-10,2,2); ctx.fillRect(sx+6,sy-10,2,2); }
+      else { ctx.fillRect(sx-4,sy-10,2,2); ctx.fillRect(sx+2,sy-10,2,2); }
+      ctx.fillStyle = pal.staff;
+      if(f==='left'){ ctx.fillRect(sx+10,sy-12,2,18); }
+      else if(f==='right'){ ctx.fillRect(sx-12,sy-12,2,18); }
+      else { ctx.fillRect(sx+10,sy-10,2,16); }
+      ctx.fillStyle = pal.orb;
+      if(f==='left'){ ctx.fillRect(sx+9,sy-14,4,4); }
+      else if(f==='right'){ ctx.fillRect(sx-13,sy-14,4,4); }
+      else { ctx.fillRect(sx+9,sy-12,4,4); }
+      ctx.fillStyle = pal.eye;
+      if(f==='left'){ ctx.fillRect(sx-6,sy-9,1,1); ctx.fillRect(sx-2,sy-9,1,1); }
+      else if(f==='right'){ ctx.fillRect(sx+2,sy-9,1,1); ctx.fillRect(sx+6,sy-9,1,1); }
+      else { ctx.fillRect(sx-4,sy-9,1,1); ctx.fillRect(sx+2,sy-9,1,1); }
     } else if(e.kind==='dragon'){
       const f = e.facing || 'down';
       const pal = e.element==='frost'
@@ -1890,7 +1919,17 @@
         e.hp-=dmg; e.hitFx=.18; hits++;
         if(e.hp<=0){
           state.player.xp+=e.xp; state.player.gold+=e.gold; state.metrics.kills=Number(state.metrics.kills||0)+1;
-          log(`🧠 +${Number(e.xp||0)} XP · +${Number(e.gold||0)} ${tr('gold')}`);
+          const enemyNames = {
+            rat: state.lang==='fr'?'Rat':'Rat',
+            slime: state.lang==='fr'?'Slime':'Slime',
+            brute: state.lang==='fr'?'Brute':'Brute',
+            ogre: state.lang==='fr'?'Ogre':'Ogre',
+            dragon: state.lang==='fr'?'Dragon':'Dragon',
+            titan: state.lang==='fr'?'Titan':'Titan',
+            archon: state.lang==='fr'?'Archonte':'Archon',
+          };
+          const enemyLabel = enemyNames[String(e.kind||'slime')] || (state.lang==='fr'?'Ennemi':'Enemy');
+          log(`🧠 ${tr('killMsg')}: ${enemyLabel} · +${Number(e.xp||0)} XP · +${Number(e.gold||0)} ${tr('gold')}`);
           if(e.kind==='rat') state.metrics.rat_kills=Number(state.metrics.rat_kills||0)+1;
           maybeLoot(); checkQuests();
         }
@@ -2281,7 +2320,7 @@
       const qty = inventoryQty(raw);
       const qtyChip = qty>1 ? `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid rgba(120,160,220,.45);color:#cfe3ff;margin-left:6px">x${qty}</span>` : '';
       const trend = compareItemTrend(raw);
-      return `<div class="item"><div><div>${trendBadge(trend)}<b>${itemLocalizedName(it.name)}</b>${rarityChip}${qtyChip}</div><div class="k">${stat}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap"><button data-use="${idx}">${tr('use')}</button><button data-sell="${idx}">${tr('sell')}</button><button data-drop="${idx}">${tr('drop')}</button></div></div>`;
+      return `<div class="item"><div><div>${trendBadge(trend)}<b>${itemLocalizedName(it.name)}</b>${rarityChip}${qtyChip}</div><div class="k">${stat}</div></div><div style="display:flex;gap:4px;flex-wrap:wrap"><button data-use="${idx}">${tr('use')}</button><button data-sell="${idx}">${tr('sell')}</button></div></div>`;
     }).join(''):`<div class="k">${tr('bagEmpty')}</div>`);
 
     const stock = shopStockForProgress();
@@ -3190,7 +3229,6 @@
     if(t instanceof HTMLElement && t.hasAttribute('data-sell-downgrades')){ sellAllDowngrades(); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-use')){ const idx=Number(t.getAttribute('data-use')||-1); if(idx>=0) useItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-sell')){ const idx=Number(t.getAttribute('data-sell')||-1); if(idx>=0) sellItemByIndex(idx); return; }
-    if(t instanceof HTMLElement && t.hasAttribute('data-drop')){ const idx=Number(t.getAttribute('data-drop')||-1); if(idx>=0) dropItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-buy-index')){ const idx=Number(t.getAttribute('data-buy-index')||-1); const stock=shopStockForProgress(); if(idx>=0&&stock[idx]) buyItem(stock[idx]); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-teleport')){ const floor=Number(t.getAttribute('data-teleport')||0); teleportToFloor(floor); return; }
     if(t instanceof HTMLElement && t.id==='chatSendBtn'){

@@ -26,6 +26,8 @@ AUTH_START_PATH = os.getenv('BQ_AUTH_START_PATH', '/api/auth/google/start').stri
 GAME_TZ = os.getenv('BQ_GAME_TIMEZONE', 'America/Montreal').strip() or 'America/Montreal'
 MAX_GUEST_IDS_PER_IP_PER_DAY = max(5, int(os.getenv('BQ_MAX_GUEST_IDS_PER_IP_PER_DAY', '40') or '40'))
 GAME_RENAME_COST = max(1, int(os.getenv('BQ_GAME_RENAME_COST', '10000') or '10000'))
+GAME_ADMIN_EMAIL = (os.getenv('BQ_ADMIN_EMAIL', 'matduke@gmail.com') or 'matduke@gmail.com').strip().lower()
+GAME_ADMIN_SECRET_PATH = (os.getenv('BQ_ADMIN_SECRET_PATH', '/ops-bq-7f4k2') or '/ops-bq-7f4k2').strip() or '/ops-bq-7f4k2'
 GAME_BAD_WORDS = {
     'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'cunt',
     'tabarnak', 'osti', 'calisse', 'criss', 'encule', 'enculé', 'pute', 'salope', 'merde',
@@ -40,7 +42,7 @@ BLOG_ARTICLE_FILES = {
     'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
     'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
 }
-GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.21.4').strip() or '0.21.4'
+GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.21.5').strip() or '0.21.5'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -425,6 +427,17 @@ def _game_identity(request: Request, guest_id: str | None = None, *, strict_gues
     return (f'guest:{gid}', gname, False)
 
 
+def _require_game_admin(request: Request) -> dict:
+    sid = request.cookies.get(_auth_cookie_name(), '')
+    user = _auth_session_user(sid)
+    if not (user and user.get('user_id')):
+        raise HTTPException(status_code=401, detail='login required')
+    email = str(user.get('email') or '').strip().lower()
+    if not email or email != GAME_ADMIN_EMAIL:
+        raise HTTPException(status_code=403, detail='forbidden')
+    return user
+
+
 def _game_client_session(payload: dict | None) -> str:
     raw = str((payload or {}).get('client_session') or '').strip()
     raw = re.sub(r'[^a-zA-Z0-9._:-]', '', raw)[:120]
@@ -783,12 +796,77 @@ def robots_txt():
 @app.get('/api/game/me')
 def game_me(request: Request, guest_id: str = ''):
     user_key, display_name, logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
-    return {'ok': True, 'logged_in': bool(logged), 'user_key': user_key, 'display_name': display_name}
+    email = ''
+    if logged:
+        sid = request.cookies.get(_auth_cookie_name(), '')
+        user = _auth_session_user(sid)
+        email = str((user or {}).get('email') or '')
+    return {'ok': True, 'logged_in': bool(logged), 'user_key': user_key, 'display_name': display_name, 'email': email}
 
 
 @app.get('/api/game/version')
 def game_version():
     return {'ok': True, 'version': GAME_VERSION}
+
+
+@app.get(GAME_ADMIN_SECRET_PATH)
+def game_admin_page(request: Request):
+    _require_game_admin(request)
+    return FileResponse(str(STATIC_DIR / 'game-admin.html'))
+
+
+@app.get(f'{GAME_ADMIN_SECRET_PATH}/stats')
+def game_admin_stats(request: Request):
+    _require_game_admin(request)
+    now = datetime.now(timezone.utc)
+    active_cutoff = (now - timedelta(minutes=5)).isoformat()
+    day_cutoff = (now - timedelta(days=1)).isoformat()
+    con = _sec_db()
+    cur = con.cursor()
+    out: dict[str, int | str | float] = {
+        'version': GAME_VERSION,
+        'generated_at': now.isoformat(),
+        'active_users_5m': 0,
+        'active_sessions_2m': 0,
+        'profiles_total': 0,
+        'users_total': 0,
+        'guests_total': 0,
+        'chat_24h': 0,
+        'daily_kills_total': 0,
+        'highest_level': 0,
+        'highest_floor': 0,
+    }
+    try:
+        cur.execute('SELECT COUNT(1) AS c FROM game_presence WHERE updated_at >= ?', (active_cutoff,))
+        out['active_users_5m'] = int((cur.fetchone() or {'c': 0})['c'] or 0)
+        cur.execute('SELECT COUNT(1) AS c FROM game_active_sessions')
+        out['active_sessions_2m'] = int((cur.fetchone() or {'c': 0})['c'] or 0)
+        cur.execute("SELECT COUNT(1) AS c FROM game_profiles WHERE user_key <> 'guest:guest'")
+        out['profiles_total'] = int((cur.fetchone() or {'c': 0})['c'] or 0)
+        cur.execute("SELECT COUNT(1) AS c FROM game_profiles WHERE user_key LIKE 'user:%'")
+        out['users_total'] = int((cur.fetchone() or {'c': 0})['c'] or 0)
+        cur.execute(
+            """
+            SELECT COUNT(1) AS c
+            FROM game_profiles p
+            LEFT JOIN game_retired_guests rg ON rg.guest_key = p.user_key
+            WHERE p.user_key LIKE 'guest:%'
+              AND p.user_key <> 'guest:guest'
+              AND NOT (rg.guest_key IS NOT NULL)
+            """
+        )
+        out['guests_total'] = int((cur.fetchone() or {'c': 0})['c'] or 0)
+        cur.execute('SELECT COUNT(1) AS c FROM game_chat_messages WHERE created_at >= ?', (day_cutoff,))
+        out['chat_24h'] = int((cur.fetchone() or {'c': 0})['c'] or 0)
+        cur.execute('SELECT COALESCE(SUM(kills),0) AS c FROM game_daily_kills WHERE day_key=?', (_game_today_key(),))
+        out['daily_kills_total'] = int((cur.fetchone() or {'c': 0})['c'] or 0)
+        cur.execute('SELECT COALESCE(MAX(level),0) AS c, COALESCE(MAX(max_floor),0) AS f FROM game_profiles')
+        row = cur.fetchone() or {'c': 0, 'f': 0}
+        out['highest_level'] = int(row['c'] or 0)
+        out['highest_floor'] = int(row['f'] or 0)
+    finally:
+        con.close()
+    return {'ok': True, 'stats': out}
 
 
 @app.post('/api/game/profile/name')

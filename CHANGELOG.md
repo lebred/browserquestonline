@@ -1,5 +1,11 @@
 # BrowserQuest Online Changelog
 
+## v0.21.5 - 2026-03-14
+- Gave Archon enemies their own distinct visual design (no longer slime-like).
+- Journal kill lines now include enemy name plus XP and gold reward.
+- Removed the inventory `Drop` button to simplify combat/item UI.
+- Added a secret admin analytics panel route protected by Google login email check (`matduke@gmail.com` by default).
+
 ## v0.21.4 - 2026-03-13
 - Fixed legacy shared guest identity issue (`guest:guest`) that could clone progress on leaderboard.
 - Added server-side normalization for bad legacy guest IDs (`guest/default/null/undefined`) to per-device stable IDs.
