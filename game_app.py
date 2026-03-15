@@ -28,6 +28,7 @@ MAX_GUEST_IDS_PER_IP_PER_DAY = max(5, int(os.getenv('BQ_MAX_GUEST_IDS_PER_IP_PER
 GAME_RENAME_COST = max(1, int(os.getenv('BQ_GAME_RENAME_COST', '10000') or '10000'))
 GAME_ADMIN_EMAIL = (os.getenv('BQ_ADMIN_EMAIL', 'matduke@gmail.com') or 'matduke@gmail.com').strip().lower()
 GAME_ADMIN_SECRET_PATH = (os.getenv('BQ_ADMIN_SECRET_PATH', '/ops-bq-7f4k2') or '/ops-bq-7f4k2').strip() or '/ops-bq-7f4k2'
+GAME_ADMIN_SECRET_PATH_WIKI = (os.getenv('BQ_ADMIN_SECRET_PATH_WIKI', '/wiki/ops-bq-7f4k2') or '/wiki/ops-bq-7f4k2').strip() or '/wiki/ops-bq-7f4k2'
 GAME_BAD_WORDS = {
     'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'cunt',
     'tabarnak', 'osti', 'calisse', 'criss', 'encule', 'enculé', 'pute', 'salope', 'merde',
@@ -42,7 +43,7 @@ BLOG_ARTICLE_FILES = {
     'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
     'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
 }
-GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.21.6').strip() or '0.21.6'
+GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.21.7').strip() or '0.21.7'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -867,6 +868,17 @@ def game_admin_stats(request: Request):
     finally:
         con.close()
     return {'ok': True, 'stats': out}
+
+
+@app.get(GAME_ADMIN_SECRET_PATH_WIKI)
+def game_admin_page_wiki(request: Request):
+    _require_game_admin(request)
+    return FileResponse(str(STATIC_DIR / 'game-admin.html'))
+
+
+@app.get(f'{GAME_ADMIN_SECRET_PATH_WIKI}/stats')
+def game_admin_stats_wiki(request: Request):
+    return game_admin_stats(request)
 
 
 @app.post('/api/game/profile/name')

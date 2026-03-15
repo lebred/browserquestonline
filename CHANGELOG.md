@@ -1,5 +1,11 @@
 # BrowserQuest Online Changelog
 
+## v0.21.7 - 2026-03-14
+- Doubled rarity drop odds (Magic/Rare/Epic) across all floor brackets.
+- Added `SEO` metadata on the main game page (`description`, `canonical`, OpenGraph, Twitter card).
+- Added secret admin fallback route under `/wiki/ops-bq-7f4k2` to avoid root-route redirect behavior on some Nginx setups.
+- Updated wiki formulas/progression/items/enemies/changelog pages to match the new drop rates and version.
+
 ## v0.21.6 - 2026-03-14
 - Added `Sell sidegrades` bulk action beside `Sell downgrades` in inventory.
 - Added Archon ranged projectile behavior in combat simulation.
