@@ -148,7 +148,6 @@
     <div class="actions">
       <button class="btn" id="panelBtn">🎒 Menu</button>
       <a class="btn" id="wikiBtn" href="/wiki">📘 Wiki</a>
-      <button class="btn" id="townPortalBtn">🌀 Town Portal</button>
       <button class="btn" id="audioBtn">🔇 Sound</button>
       <a class="btn primary" id="googleBtn" href="/api/game/auth/google/start?next_path=/game">🔐 Google</a>
     </div>
@@ -189,6 +188,7 @@
   </div>
 
   <div class="action-wrap">
+    <button class="action-btn small" id="townPortalBtn" style="border-color:#5a78b8;background:rgba(23,39,76,.9);color:#cfe0ff">🌀</button>
     <button class="action-btn small" id="potionBtn" style="border-color:#4f6ca1;background:rgba(24,42,78,.88);color:#cbe0ff">🧪</button>
     <div class="hint" id="actionHint">Action: Attaquer</div>
     <button class="action-btn" id="actionBtn">ATK</button>
@@ -291,7 +291,7 @@
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
-  const GAME_VERSION = '0.21.8';
+  const GAME_VERSION = '0.21.9';
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
@@ -697,6 +697,7 @@
       floor:'Floor',
       tierNow:'Current tier',
       lootFound:'Loot',
+      eliteLoot:'Elite loot',
       logout:'Logout',
       dailyLeaderboard:'Daily Kills',
       globalLeaderboard:'Overall Leaderboard',
@@ -778,6 +779,7 @@
       floor:'Floor',
       tierNow:'Palier actuel',
       lootFound:'Loot',
+      eliteLoot:'Butin d\'élite',
       logout:'Déconnexion',
       dailyLeaderboard:'Classement quotidien',
       globalLeaderboard:'Classement global',
@@ -835,7 +837,7 @@
     if(b) b.textContent = `🌐 ${state.lang.toUpperCase()}`;
     const pb=document.getElementById('panelBtn'); if(pb) pb.textContent = `🎒 ${tr('menu')}`;
     const wb=document.getElementById('wikiBtn'); if(wb) wb.textContent = `📘 ${tr('wiki')}`;
-    const tbp=document.getElementById('townPortalBtn'); if(tbp) tbp.textContent = `🌀 ${tr('townPortal')}`;
+    const tbp=document.getElementById('townPortalBtn'); if(tbp) tbp.title = tr('townPortal');
     const menuTitle = document.getElementById('menuTitle'); if(menuTitle) menuTitle.textContent = tr('menu');
     const logoutBtn = document.getElementById('logoutBtn'); if(logoutBtn) logoutBtn.textContent = `🚪 ${tr('logout')}`;
     const tg=document.getElementById('tabGear'); if(tg) tg.textContent = tr('gear');
@@ -1995,7 +1997,22 @@
       if(itemName==='Potion HP++') state.metrics.potions_found=Number(state.metrics.potions_found||0)+1;
       const d=itemData(item);
       state.lootTexts.push({x:state.player.x,y:state.player.y-0.6,t:0,life:1.35,text:`+ ${itemDisplayName(item)}`,color:(d?.color||'#ffe08a')});
-      log(`🎁 ${tr('lootFound')}: ${itemDisplayName(item)}`);
+      const eliteKinds = new Set(['brute','ogre','dragon','archon','titan']);
+      if(eliteKinds.has(kind)){
+        const enemyNames = {
+          rat: state.lang==='fr'?'Rat':'Rat',
+          slime: state.lang==='fr'?'Slime':'Slime',
+          brute: state.lang==='fr'?'Brute':'Brute',
+          ogre: state.lang==='fr'?'Ogre':'Ogre',
+          dragon: state.lang==='fr'?'Dragon':'Dragon',
+          titan: state.lang==='fr'?'Titan':'Titan',
+          archon: state.lang==='fr'?'Archonte':'Archon',
+        };
+        const enemyLabel = enemyNames[kind] || (state.lang==='fr'?'Élite':'Elite');
+        log(`🎁 ${tr('eliteLoot')}: ${enemyLabel} -> ${itemDisplayName(item)}`);
+      } else {
+        log(`🎁 ${tr('lootFound')}: ${itemDisplayName(item)}`);
+      }
     }
   }
 
