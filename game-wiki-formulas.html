@@ -107,6 +107,17 @@ elite_drop_bonus:
   archon = 30.0% + stronger rarity bonus
   titan  = 42.0% + strongest rarity bonus
 
+rarity_roll_by_floor (base, before elite bonuses):
+  1-4   => magic 5.0% · rare 0.6% · epic 0.015%
+  5-9   => magic 7.0% · rare 1.1% · epic 0.06%
+  10-14 => magic 9.0% · rare 1.8% · epic 0.12%
+  15-20 => magic 11.0% · rare 2.8% · epic 0.24%
+  21-30 => magic 13.0% · rare 4.2% · epic 0.50%
+  31-40 => magic 16.0% · rare 6.0% · epic 1.00%
+  41+   => magic 18.0% · rare 8.2% · epic 1.80%
+
+enemy_move_speed = base_enemy_speed * (1 + 0.01 * floor)
+
 shop_buy_multiplier(consumable) = x10
 shop_buy_multiplier(equipment) = x25
 
