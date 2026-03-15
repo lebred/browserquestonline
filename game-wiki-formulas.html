@@ -44,7 +44,7 @@
     </div>
 
     <section class="hero">
-      <h1>📐 Core Formulas (v0.21.7)</h1>
+      <h1>📐 Core Formulas (v0.21.8)</h1>
       <p>These formulas mirror live gameplay logic and are the reference for balancing changes.</p>
     </section>
 
@@ -99,7 +99,14 @@ base_gold = floor((2 + rand(5+floor)) * (1 + tier*0.22))</pre>
 
       <article class="card">
         <h2>Loot / Economy / Death</h2>
-        <pre>loot_roll_on_kill = 12.5%
+        <pre>loot_roll_on_kill = 12.5% baseline
+elite_drop_bonus:
+  brute  = 16.0%
+  ogre   = 20.0%
+  dragon = 28.0% + rarity bonus
+  archon = 30.0% + stronger rarity bonus
+  titan  = 42.0% + strongest rarity bonus
+
 shop_buy_multiplier(consumable) = x10
 shop_buy_multiplier(equipment) = x25
 

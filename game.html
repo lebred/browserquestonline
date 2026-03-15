@@ -291,7 +291,7 @@
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
-  const GAME_VERSION = '0.21.6';
+  const GAME_VERSION = '0.21.8';
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
@@ -572,7 +572,7 @@
     }
     return out;
   }
-  function rarityRollByFloor(floor){
+  function rarityRollByFloor(floor, bonus=null){
     const f = Number(floor||1);
     let pMagic=0.10, pRare=0.012, pEpic=0.00030;
     if(f>=5){ pMagic=0.14; pRare=0.022; pEpic=0.0012; }
@@ -581,6 +581,12 @@
     if(f>=21){ pMagic=0.26; pRare=0.084; pEpic=0.0100; }
     if(f>=31){ pMagic=0.32; pRare=0.120; pEpic=0.0200; }
     if(f>=41){ pMagic=0.36; pRare=0.164; pEpic=0.0360; }
+    if(bonus && typeof bonus === 'object'){
+      const mult = Math.max(1, Number(bonus.mult || 1));
+      pMagic = Math.min(0.72, pMagic * mult + Math.max(0, Number(bonus.magic || 0)));
+      pRare = Math.min(0.38, pRare * mult + Math.max(0, Number(bonus.rare || 0)));
+      pEpic = Math.min(0.12, pEpic * mult + Math.max(0, Number(bonus.epic || 0)));
+    }
     const r = Math.random();
     if(r < pEpic) return 'epic';
     if(r < pEpic + pRare) return 'rare';
@@ -1939,7 +1945,7 @@
           const enemyLabel = enemyNames[String(e.kind||'slime')] || (state.lang==='fr'?'Ennemi':'Enemy');
           log(`🧠 ${tr('killMsg')}: ${enemyLabel} · +${Number(e.xp||0)} XP · +${Number(e.gold||0)} ${tr('gold')}`);
           if(e.kind==='rat') state.metrics.rat_kills=Number(state.metrics.rat_kills||0)+1;
-          maybeLoot(); checkQuests();
+          maybeLoot(e); checkQuests();
         }
       }
     }
@@ -1947,8 +1953,27 @@
     if(hits>0) log(`⚔️ ${hits} ${tr('hitMsg')}`);
   }
 
-  function maybeLoot(){
-    if(Math.random()<0.125){
+  function maybeLoot(enemy=null){
+    const kind = String(enemy?.kind || 'slime');
+    let dropChance = 0.125;
+    let rarityBonus = null;
+    if(kind === 'brute'){
+      dropChance = 0.16;
+      rarityBonus = {mult:1.05, magic:0.01, rare:0.003, epic:0.0004};
+    } else if(kind === 'ogre'){
+      dropChance = 0.20;
+      rarityBonus = {mult:1.1, magic:0.02, rare:0.006, epic:0.0009};
+    } else if(kind === 'dragon'){
+      dropChance = 0.28;
+      rarityBonus = {mult:1.2, magic:0.04, rare:0.014, epic:0.0025};
+    } else if(kind === 'archon'){
+      dropChance = 0.30;
+      rarityBonus = {mult:1.22, magic:0.05, rare:0.017, epic:0.0030};
+    } else if(kind === 'titan'){
+      dropChance = 0.42;
+      rarityBonus = {mult:1.35, magic:0.08, rare:0.03, epic:0.0075};
+    }
+    if(Math.random()<dropChance){
       const t = floorTier(state.floor||1);
       const pools = [
         ['Potion HP','Dague rouillée','Amulette terne','Bottes légères','Bouclier en bois'],
@@ -1963,7 +1988,7 @@
       ];
       const pool = pools[Math.min(t, pools.length-1)];
       const itemName=pool[rng(pool.length)];
-      const rarity=rarityRollByFloor(state.floor||1);
+      const rarity=rarityRollByFloor(state.floor||1, rarityBonus);
       const item=encodeItem(itemName, rarity);
       addInventoryItem(itemName, rarity, 1);
       if(itemName==='Potion HP') state.metrics.potions_found=Number(state.metrics.potions_found||0)+1;
