@@ -28,12 +28,13 @@
     .c-common{color:#9fb2d8}.c-magic{color:#59b5ff}.c-rare{color:#b786ff}.c-epic{color:#ffb14a}
     @media (max-width:760px){
       .wrap{padding:10px}
+      table,thead,tbody,tr,th,td{display:block;width:100%}
       table{width:100%;table-layout:auto;font-size:12px}
       thead{display:none}
       tbody{display:block}
       tbody tr{display:block;margin:0 0 8px;padding:6px 8px;border:1px solid rgba(95,128,178,.32);border-radius:10px;background:rgba(12,24,44,.55)}
       tbody tr:last-child{margin-bottom:0}
-      td{display:grid;grid-template-columns:minmax(92px,44%) 1fr;gap:8px;align-items:start;padding:6px 0;border-bottom:1px dashed rgba(95,128,178,.28)}
+      td{display:grid;grid-template-columns:1fr;gap:4px;align-items:start;padding:6px 0;border-bottom:1px dashed rgba(95,128,178,.28)}
       td:last-child{border-bottom:none}
       td::before{content:attr(data-label);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#9eb7de;font-weight:800}
       h2{font-size:18px}
