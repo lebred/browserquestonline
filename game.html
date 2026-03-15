@@ -104,7 +104,7 @@
       .actions{justify-content:flex-start;gap:4px;max-width:60vw}
       .btn{padding:4px 7px;font-size:11px}
       .status{
-        top:44px;
+        top:6px;
         left:auto;
         right:6px;
         min-width:185px;
@@ -128,7 +128,9 @@
         font-size:16px;
       }
       .hint{display:none}
-      .action-wrap{right:8px;bottom:58px}
+      .action-wrap{right:8px;bottom:52px;gap:6px}
+      .action-btn{width:68px;height:68px;font-size:12px}
+      .action-btn.small{width:44px;height:44px;font-size:14px}
       .panel{
         top:34px;
         bottom:8px;
@@ -291,7 +293,7 @@
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
-  const GAME_VERSION = '0.21.9';
+  const GAME_VERSION = '0.21.10';
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
@@ -2264,6 +2266,19 @@
       return !!(it && it.slot === 'consumable' && inventoryQty(raw) > 0);
     });
   }
+  function bulkSellMode(){
+    let downs=0, sides=0;
+    for(const raw of state.inv){
+      const it = itemData(raw);
+      if(!it || it.slot === 'consumable') continue;
+      const trend = compareItemTrend(raw);
+      if(trend === 'down') downs += 1;
+      else if(trend === 'same') sides += 1;
+    }
+    if(downs > 0) return {mode:'down', downs, sides, disabled:false};
+    if(sides > 0) return {mode:'same', downs, sides, disabled:false};
+    return {mode:'none', downs, sides, disabled:true};
+  }
   function sellAllDowngrades(){
     if(!isNearRole('merchant',1.7)){ showDialog(tr('needMerchant')); return; }
     let sold=0, gain=0;
@@ -2383,7 +2398,15 @@
     ensureQuests();
     panes.quests.innerHTML=QUESTS.map(q=>{ const s=state.quests.find(x=>x.id===q.id)||{done:false}; const cur=Number(state.metrics[q.metric]||0); return `<div>${s.done?'✅':'⬜'} ${q.title} <span style="color:var(--muted)">(${Math.min(cur,q.target)}/${q.target})</span></div>`; }).join('');
 
-    panes.bags.innerHTML=(`<div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn" data-sell-downgrades="1">${state.lang==='fr'?'Vendre les downgrades':'Sell downgrades'}</button><button class="btn" data-sell-sidegrades="1">${state.lang==='fr'?'Vendre les sidegrades':'Sell sidegrades'}</button></div>`)+(state.inv.length?state.inv.map((raw,idx)=>{
+    const bulkSell = bulkSellMode();
+    const bulkLabel = bulkSell.mode==='down'
+      ? (state.lang==='fr'?'Vendre les downgrades':'Sell downgrades')
+      : bulkSell.mode==='same'
+        ? (state.lang==='fr'?'Vendre les sidegrades':'Sell sidegrades')
+        : (state.lang==='fr'?'Aucun downgrade/sidegrade':'No downgrades/sidegrades');
+    const bulkAttr = bulkSell.mode==='down' ? 'data-sell-bulk="down"' : bulkSell.mode==='same' ? 'data-sell-bulk="same"' : 'data-sell-bulk="none"';
+    const bulkStyle = bulkSell.disabled ? 'opacity:.45;filter:grayscale(.4);cursor:not-allowed' : '';
+    panes.bags.innerHTML=(`<div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn" ${bulkAttr} style="${bulkStyle}">${bulkLabel}</button></div>`)+(state.inv.length?state.inv.map((raw,idx)=>{
       const it=itemData(raw)||{slot:'misc',atk:0,def:0,hp:0,heal:0,rarity:'common',color:'#9fb2d8',name:String(raw)};
       const stat=`${it.slot} · ATK ${it.atk||0} · DEF ${it.def||0} · HP ${it.hp||0}`+(it.ms?` · SPD +${Math.round(Number(it.ms||0)*100)}%`:'')+(it.heal?` · Heal ${it.heal}`:'');
       const rarityChip = (it.slot==='consumable') ? '' : `<span style="font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid ${it.color};color:${it.color};margin-left:6px">${rarityLabel(it.rarity)}</span>`;
@@ -3304,6 +3327,12 @@
     const t=e.target;
     if(t instanceof HTMLElement && t.hasAttribute('data-sell-downgrades')){ sellAllDowngrades(); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-sell-sidegrades')){ sellAllSidegrades(); return; }
+    if(t instanceof HTMLElement && t.hasAttribute('data-sell-bulk')){
+      const mode = String(t.getAttribute('data-sell-bulk')||'');
+      if(mode === 'down') sellAllDowngrades();
+      else if(mode === 'same') sellAllSidegrades();
+      return;
+    }
     if(t instanceof HTMLElement && t.hasAttribute('data-use')){ const idx=Number(t.getAttribute('data-use')||-1); if(idx>=0) useItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-sell')){ const idx=Number(t.getAttribute('data-sell')||-1); if(idx>=0) sellItemByIndex(idx); return; }
     if(t instanceof HTMLElement && t.hasAttribute('data-buy-index')){ const idx=Number(t.getAttribute('data-buy-index')||-1); const stock=shopStockForProgress(); if(idx>=0&&stock[idx]) buyItem(stock[idx]); return; }
