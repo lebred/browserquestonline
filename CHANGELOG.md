@@ -1,5 +1,10 @@
 # BrowserQuest Online Changelog
 
+## v0.22.0 - 2026-03-16
+- Extended the BrowserQuest item ladder, shop tiers, and loot pools all the way through floors `76-80`, giving the game a real level-60 progression route plus one stretch endgame tier.
+- Added seven new late-game gear lines: `Zenith`, `Gravitation`, `Seraphic`, `Cataclysm`, `Eclipse`, `Firmament`, and `Last Sky`.
+- Rebuilt the wiki home, progression, items, enemies, and formulas pages so documentation now matches the live progression scope instead of effectively stopping at `41+`.
+
 ## v0.21.7 - 2026-03-14
 - Doubled rarity drop odds (Magic/Rare/Epic) across all floor brackets.
 - Added `SEO` metadata on the main game page (`description`, `canonical`, OpenGraph, Twitter card).

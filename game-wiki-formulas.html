@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>BrowserQuest Wiki - Formulas</title>
-  <meta name="description" content="BrowserQuest Online gameplay formulas: tier scaling, rarity probabilities, enemy population, shop multipliers, death penalty." />
+  <meta name="description" content="BrowserQuest Online gameplay formulas: tier scaling, rarity probabilities, enemy population, shop multipliers, death penalty, and level 60 path balancing." />
   <style>
     :root{--bg:#070f1f;--card:#102340;--line:#2d4f80;--text:#eaf2ff;--muted:#9ab3d9}
     *{box-sizing:border-box} html,body{margin:0;padding:0;overflow-x:hidden}
@@ -45,8 +45,8 @@
     </div>
 
     <section class="hero">
-      <h1>📐 Core Formulas (v0.21.8)</h1>
-      <p>These formulas mirror live gameplay logic and are the reference for balancing changes.</p>
+      <h1>📐 Core Formulas (v0.22.0)</h1>
+      <p>These formulas mirror live gameplay logic and are the reference for balancing changes through the level 60 path.</p>
     </section>
 
     <section class="grid">
@@ -54,7 +54,9 @@
         <h2>Tier and Level Gating</h2>
         <pre>tier(floor) = floor((max(1, floor) - 1) / 5)
 required_level(floor) = 1 + 4 * tier(floor)
-checkpoint floors = multiples of 5</pre>
+checkpoint floors = multiples of 5
+level 60 path target = floors 71-75
+stretch tier = floors 76-80</pre>
       </article>
 
       <article class="card">
@@ -72,17 +74,17 @@ checkpoint floors = multiples of 5</pre>
       </article>
 
       <article class="card">
-        <h2>Rarity Probability by Floor</h2>
+        <h2>Base Rarity Probability by Floor</h2>
         <table>
           <thead><tr><th>Floor range</th><th>Magic</th><th>Rare</th><th>Epic</th></tr></thead>
           <tbody>
-            <tr><td>1-4</td><td>10.0%</td><td>1.2%</td><td>0.030%</td></tr>
-            <tr><td>5-9</td><td>14.0%</td><td>2.2%</td><td>0.120%</td></tr>
-            <tr><td>10-14</td><td>18.0%</td><td>3.6%</td><td>0.240%</td></tr>
-            <tr><td>15-20</td><td>22.0%</td><td>5.6%</td><td>0.480%</td></tr>
-            <tr><td>21-30</td><td>26.0%</td><td>8.4%</td><td>1.000%</td></tr>
-            <tr><td>31-40</td><td>32.0%</td><td>12.0%</td><td>2.000%</td></tr>
-            <tr><td>41+</td><td>36.0%</td><td>16.4%</td><td>3.600%</td></tr>
+            <tr><td>1-4</td><td>5.0%</td><td>0.6%</td><td>0.015%</td></tr>
+            <tr><td>5-9</td><td>7.0%</td><td>1.1%</td><td>0.060%</td></tr>
+            <tr><td>10-14</td><td>9.0%</td><td>1.8%</td><td>0.120%</td></tr>
+            <tr><td>15-20</td><td>11.0%</td><td>2.8%</td><td>0.240%</td></tr>
+            <tr><td>21-30</td><td>13.0%</td><td>4.2%</td><td>0.500%</td></tr>
+            <tr><td>31-40</td><td>16.0%</td><td>6.0%</td><td>1.000%</td></tr>
+            <tr><td>41+</td><td>18.0%</td><td>8.2%</td><td>1.800%</td></tr>
           </tbody>
         </table>
       </article>
@@ -90,12 +92,14 @@ checkpoint floors = multiples of 5</pre>
       <article class="card">
         <h2>Enemy Population / Scaling</h2>
         <pre>desired_enemy_count = min(14 + floor*2 + tier*3, cap)
-cap = 52 (floors &lt; 41), 64 (floors >= 41)
+cap = 52 (floors < 41), 64 (floors >= 41)
 
 base_hp = floor((18 + floor*5) * (1 + tier*0.55))
 base_atk = floor((3 + floor) * (1 + tier*0.4))
 base_xp = floor((8 + floor*2) * (1 + tier*0.3))
-base_gold = floor((2 + rand(5+floor)) * (1 + tier*0.22))</pre>
+base_gold = floor((2 + rand(5+floor)) * (1 + tier*0.22))
+
+enemy_move_speed = base_enemy_speed * (1 + 0.02 * floor)</pre>
       </article>
 
       <article class="card">
@@ -107,17 +111,6 @@ elite_drop_bonus:
   dragon = 28.0% + rarity bonus
   archon = 30.0% + stronger rarity bonus
   titan  = 42.0% + strongest rarity bonus
-
-rarity_roll_by_floor (base, before elite bonuses):
-  1-4   => magic 5.0% · rare 0.6% · epic 0.015%
-  5-9   => magic 7.0% · rare 1.1% · epic 0.06%
-  10-14 => magic 9.0% · rare 1.8% · epic 0.12%
-  15-20 => magic 11.0% · rare 2.8% · epic 0.24%
-  21-30 => magic 13.0% · rare 4.2% · epic 0.50%
-  31-40 => magic 16.0% · rare 6.0% · epic 1.00%
-  41+   => magic 18.0% · rare 8.2% · epic 1.80%
-
-enemy_move_speed = base_enemy_speed * (1 + 0.02 * floor)
 
 shop_buy_multiplier(consumable) = x10
 shop_buy_multiplier(equipment) = x25

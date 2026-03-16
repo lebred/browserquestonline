@@ -43,7 +43,7 @@ BLOG_ARTICLE_FILES = {
     'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
     'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
 }
-GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.21.13').strip() or '0.21.13'
+GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.22.0').strip() or '0.22.0'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
