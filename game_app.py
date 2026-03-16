@@ -43,7 +43,7 @@ BLOG_ARTICLE_FILES = {
     'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
     'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
 }
-GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.21.12').strip() or '0.21.12'
+GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.21.13').strip() or '0.21.13'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -147,6 +147,15 @@ def _validate_player_name(raw: str) -> tuple[bool, str]:
     if re.search(r'(.)\1{4,}', n):
         return (False, '')
     return (True, n)
+
+
+def _display_name_taken(cur: sqlite3.Cursor, desired: str, user_key: str) -> bool:
+    cur.execute(
+        'SELECT user_key FROM game_profiles WHERE lower(trim(display_name)) = lower(trim(?)) AND user_key <> ? LIMIT 1',
+        (str(desired or '').strip(), str(user_key or '').strip()),
+    )
+    row = cur.fetchone()
+    return bool(row and str(row['user_key'] or '').strip())
 
 
 def _request_ip(request: Request) -> str:
@@ -896,6 +905,9 @@ def game_profile_name_set(request: Request, payload: dict = Body(...)):
     now_iso = datetime.now(timezone.utc).isoformat()
     con = _sec_db()
     cur = con.cursor()
+    if _display_name_taken(cur, clean_name, user_key):
+        con.close()
+        return {'ok': False, 'reason': 'name_taken'}
     cur.execute('SELECT save_json FROM game_saves WHERE user_key=? LIMIT 1', (user_key,))
     row = cur.fetchone()
     try:

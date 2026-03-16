@@ -176,6 +176,7 @@
       <button class="tab" data-tab="quests" id="tabQuests" style="display:none">Quêtes</button>
       <button class="tab" data-tab="bags" id="tabBags">Inventaire</button>
       <button class="tab" data-tab="shop" id="tabShop">Marchand</button>
+      <button class="tab" data-tab="stats" id="tabStats">Stats</button>
       <button class="tab" data-tab="rank" id="tabRank">Classement</button>
       <button class="tab" data-tab="chat">Chat</button>
       <button class="tab" data-tab="log" id="tabLog">Journal</button>
@@ -184,6 +185,7 @@
     <div class="pane" id="pane-quests" style="display:none"></div>
     <div class="pane" id="pane-bags"></div>
     <div class="pane" id="pane-shop"></div>
+    <div class="pane" id="pane-stats"></div>
     <div class="pane" id="pane-rank"></div>
     <div class="pane" id="pane-chat"></div>
     <div class="pane" id="pane-log"></div>
@@ -273,7 +275,7 @@
 
   const panes = {
     gear:document.getElementById('pane-gear'), quests:document.getElementById('pane-quests'), bags:document.getElementById('pane-bags'),
-    shop:document.getElementById('pane-shop'), rank:document.getElementById('pane-rank'), chat:document.getElementById('pane-chat'), log:document.getElementById('pane-log'),
+    shop:document.getElementById('pane-shop'), stats:document.getElementById('pane-stats'), rank:document.getElementById('pane-rank'), chat:document.getElementById('pane-chat'), log:document.getElementById('pane-log'),
   };
 
   function createGuestId(){
@@ -293,7 +295,7 @@
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
-  const GAME_VERSION = '0.21.12';
+  const GAME_VERSION = '0.21.13';
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
@@ -629,7 +631,7 @@
     lavaTick:0,
     hurtFlash:0,
     chatStick:true,
-    metrics:{rat_kills:0,max_floor:0,potions_found:0,kills:0},quests:[],questsDone:0,
+    metrics:{rat_kills:0,slime_kills:0,brute_kills:0,ogre_kills:0,dragon_kills:0,archon_kills:0,titan_kills:0,max_floor:0,potions_found:0,kills:0},quests:[],questsDone:0,
     ctxAction:{type:'attack',target:null,label:'ATK',hint:'Action: Attaquer'},
     fullscreenTried:false,dead:false,levelFxUntil:0,lastVibeAt:0,
     teleportOpen:false,lastPortalOpenAt:0,
@@ -641,7 +643,7 @@
   };
   const I18N = {
     en:{
-      menu:'Menu', gear:'Gear', quests:'Quests', bags:'Inventory', shop:'Merchant', rank:'Leaderboard', log:'Journal',
+      menu:'Menu', gear:'Gear', quests:'Quests', bags:'Inventory', shop:'Merchant', stats:'Stats', rank:'Leaderboard', log:'Journal',
       actionAttack:'Action: Attack', actionEnter:'Action: Enter', actionTalk:'Action: Talk', actionMerchant:'Action: Merchant',
       actionTeleporter:'Action: Teleporter',
       player:'Player', zone:'Zone', level:'Level', gold:'Gold', hp:'HP', xp:'XP',
@@ -714,16 +716,26 @@
       renamerTooPoor:'You need 10000 gold to rename.',
       renamerInvalid:'Invalid nickname. Use 3-18 chars (letters, numbers, space, _ -).',
       renamerBad:'Nickname blocked by content filter.',
+      renamerTaken:'That name is already taken.',
       renamedOk:'Nickname updated.',
       actionRenamer:'Action: Renamer',
       renameTitle:'✏️ Change nickname',
       renameCost:'Cost: 10000 gold',
       renameCancel:'Cancel',
       renameConfirm:'Confirm',
+      allTimeStats:'All-time stats',
+      totalKills:'Total kills',
+      mobRat:'Rats',
+      mobSlime:'Slimes',
+      mobBrute:'Brutes',
+      mobOgre:'Ogres',
+      mobDragon:'Dragons',
+      mobArchon:'Archons',
+      mobTitan:'Titans',
       versionLabel:'Version',
     },
     fr:{
-      menu:'Menu', gear:'Équipement', quests:'Quêtes', bags:'Inventaire', shop:'Marchand', rank:'Classement', log:'Journal',
+      menu:'Menu', gear:'Équipement', quests:'Quêtes', bags:'Inventaire', shop:'Marchand', stats:'Stats', rank:'Classement', log:'Journal',
       actionAttack:'Action: Attaquer', actionEnter:'Action: Entrer', actionTalk:'Action: Parler', actionMerchant:'Action: Marchand',
       actionTeleporter:'Action: Téléporteur',
       player:'Joueur', zone:'Zone', level:'Niveau', gold:'Or', hp:'HP', xp:'XP',
@@ -796,12 +808,22 @@
       renamerTooPoor:'Il faut 10000 or pour renommer.',
       renamerInvalid:'Pseudo invalide. Utilisez 3-18 caractères (lettres, chiffres, espace, _ -).',
       renamerBad:'Pseudo refusé par le filtre de contenu.',
+      renamerTaken:'Ce nom est déjà pris.',
       renamedOk:'Pseudo mis à jour.',
       actionRenamer:'Action: Renommeur',
       renameTitle:'✏️ Changer de pseudo',
       renameCost:'Coût: 10000 or',
       renameCancel:'Annuler',
       renameConfirm:'Confirmer',
+      allTimeStats:'Statistiques cumulatives',
+      totalKills:'Kills totaux',
+      mobRat:'Rats',
+      mobSlime:'Slimes',
+      mobBrute:'Brutes',
+      mobOgre:'Ogres',
+      mobDragon:'Dragons',
+      mobArchon:'Archontes',
+      mobTitan:'Titans',
       versionLabel:'Version',
     },
   };
@@ -846,6 +868,7 @@
     const tq=document.getElementById('tabQuests'); if(tq) tq.textContent = tr('quests');
     const tb=document.getElementById('tabBags'); if(tb) tb.textContent = tr('bags');
     const ts=document.getElementById('tabShop'); if(ts) ts.textContent = tr('shop');
+    const tstats=document.getElementById('tabStats'); if(tstats) tstats.textContent = tr('stats');
     const trk=document.getElementById('tabRank'); if(trk) trk.textContent = tr('rank');
     const tl=document.getElementById('tabLog'); if(tl) tl.textContent = tr('log');
     const lP=document.getElementById('lblPlayer'); if(lP) lP.textContent = tr('player');
@@ -898,9 +921,9 @@
           [174.61,220.0,293.66],
           [196.0,246.94,293.66],
         ],
-        gainLead:0.023,
-        gainBass:0.016,
-        gainChord:0.010,
+        gainLead:0.046,
+        gainBass:0.030,
+        gainChord:0.018,
       };
     }
     const f = Math.max(1, Number(state.floor||1));
@@ -953,9 +976,9 @@
       arpPhrases:m.arpPhrases,
       bass:m.bass,
       chords:m.chords,
-      gainLead:0.02,
-      gainBass:0.016,
-      gainChord:0.009,
+      gainLead:0.040,
+      gainBass:0.028,
+      gainChord:0.016,
     };
   }
   function playNote(freq=220, dur=0.16, gain=0.04, type='triangle'){
@@ -1083,7 +1106,7 @@
     state.player = {x:12,y:10,hp:100,hpMax:100,atkBase:8,defBase:2,atk:8,def:2,moveSpeed:1,lvl:1,xp:0,xpNeed:40,gold:0,lastAtk:0,swingUntil:0,swingDir:0,facing:'down',attackAt:0};
     state.equipped = {weapon:null,shield:null,armor:null,boots:null,ring:null};
     state.inv = [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
-    state.metrics = {rat_kills:0,max_floor:0,potions_found:0,kills:0};
+    state.metrics = {rat_kills:0,slime_kills:0,brute_kills:0,ogre_kills:0,dragon_kills:0,archon_kills:0,titan_kills:0,max_floor:0,potions_found:0,kills:0};
     state.quests = [];
     state.questsDone = 0;
     state.peers = [];
@@ -1949,6 +1972,12 @@
           const enemyLabel = enemyNames[String(e.kind||'slime')] || (state.lang==='fr'?'Ennemi':'Enemy');
           log(`🧠 ${tr('killMsg')}: ${enemyLabel} · +${Number(e.xp||0)} XP · +${Number(e.gold||0)} ${tr('gold')}`);
           if(e.kind==='rat') state.metrics.rat_kills=Number(state.metrics.rat_kills||0)+1;
+          if(e.kind==='slime') state.metrics.slime_kills=Number(state.metrics.slime_kills||0)+1;
+          if(e.kind==='brute') state.metrics.brute_kills=Number(state.metrics.brute_kills||0)+1;
+          if(e.kind==='ogre') state.metrics.ogre_kills=Number(state.metrics.ogre_kills||0)+1;
+          if(e.kind==='dragon') state.metrics.dragon_kills=Number(state.metrics.dragon_kills||0)+1;
+          if(e.kind==='archon') state.metrics.archon_kills=Number(state.metrics.archon_kills||0)+1;
+          if(e.kind==='titan') state.metrics.titan_kills=Number(state.metrics.titan_kills||0)+1;
           maybeLoot(e); checkQuests();
         }
       }
@@ -2397,6 +2426,18 @@
 
     ensureQuests();
     panes.quests.innerHTML=QUESTS.map(q=>{ const s=state.quests.find(x=>x.id===q.id)||{done:false}; const cur=Number(state.metrics[q.metric]||0); return `<div>${s.done?'✅':'⬜'} ${q.title} <span style="color:var(--muted)">(${Math.min(cur,q.target)}/${q.target})</span></div>`; }).join('');
+    panes.stats.innerHTML = [
+      `<div class="k" style="margin-bottom:6px">${tr('allTimeStats')}</div>`,
+      `<div><b>${tr('totalKills')}:</b> ${Number(state.metrics.kills||0)}</div>`,
+      `<hr style="border-color:rgba(140,180,230,.25);margin:8px 0">`,
+      `<div>🐀 <b>${tr('mobRat')}:</b> ${Number(state.metrics.rat_kills||0)}</div>`,
+      `<div>🟢 <b>${tr('mobSlime')}:</b> ${Number(state.metrics.slime_kills||0)}</div>`,
+      `<div>💪 <b>${tr('mobBrute')}:</b> ${Number(state.metrics.brute_kills||0)}</div>`,
+      `<div>👹 <b>${tr('mobOgre')}:</b> ${Number(state.metrics.ogre_kills||0)}</div>`,
+      `<div>🐉 <b>${tr('mobDragon')}:</b> ${Number(state.metrics.dragon_kills||0)}</div>`,
+      `<div>🔮 <b>${tr('mobArchon')}:</b> ${Number(state.metrics.archon_kills||0)}</div>`,
+      `<div>🗿 <b>${tr('mobTitan')}:</b> ${Number(state.metrics.titan_kills||0)}</div>`,
+    ].join('');
 
     const bulkSell = bulkSellMode();
     const bulkLabel = bulkSell.mode==='down'
@@ -2647,6 +2688,7 @@
       const d = await r.json().catch(()=>({}));
       if(!d?.ok){
         if(d?.reason === 'bad_name'){ showDialog(tr('renamerBad')); return; }
+        if(d?.reason === 'name_taken'){ showDialog(tr('renamerTaken')); return; }
         if(d?.reason === 'not_enough_gold'){ showDialog(tr('renamerTooPoor')); return; }
         showDialog(state.lang==='fr' ? 'Renommage échoué.' : 'Rename failed.');
         return;
@@ -3100,7 +3142,17 @@
     if(!Number.isFinite(Number(state.player.swingDir))) state.player.swingDir = 0;
     state.equipped=normalizeEquipped(s.equipped);
     state.inv=normalizeInventory(s.inv);
-    state.metrics=(s.metrics&&typeof s.metrics==='object')?s.metrics:{rat_kills:0,max_floor:0,potions_found:0,kills:0};
+    state.metrics=(s.metrics&&typeof s.metrics==='object')?s.metrics:{rat_kills:0,slime_kills:0,brute_kills:0,ogre_kills:0,dragon_kills:0,archon_kills:0,titan_kills:0,max_floor:0,potions_found:0,kills:0};
+    state.metrics.rat_kills=Number(state.metrics.rat_kills||0);
+    state.metrics.slime_kills=Number(state.metrics.slime_kills||0);
+    state.metrics.brute_kills=Number(state.metrics.brute_kills||0);
+    state.metrics.ogre_kills=Number(state.metrics.ogre_kills||0);
+    state.metrics.dragon_kills=Number(state.metrics.dragon_kills||0);
+    state.metrics.archon_kills=Number(state.metrics.archon_kills||0);
+    state.metrics.titan_kills=Number(state.metrics.titan_kills||0);
+    state.metrics.max_floor=Number(state.metrics.max_floor||0);
+    state.metrics.potions_found=Number(state.metrics.potions_found||0);
+    state.metrics.kills=Number(state.metrics.kills||0);
     state.quests=Array.isArray(s.quests)?s.quests:[]; state.questsDone=Number(s.questsDone||0);
     const sx = Number(state.player.x || 0);
     const sy = Number(state.player.y || 0);
