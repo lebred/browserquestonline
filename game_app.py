@@ -43,7 +43,7 @@ BLOG_ARTICLE_FILES = {
     'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
     'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
 }
-GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.22.0').strip() or '0.22.0'
+GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.23.0').strip() or '0.23.0'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -121,6 +121,14 @@ def _safe_display_name(raw: str, default: str = 'Player') -> str:
     if _contains_bad_words(n):
         return default
     return n
+
+
+def _sanitize_text_input(raw: str, max_len: int = 280) -> str:
+    txt = str(raw or '')
+    txt = txt.replace('\x00', ' ')
+    txt = re.sub(r'[\x01-\x08\x0B-\x1F\x7F]', ' ', txt)
+    txt = re.sub(r'\s+', ' ', txt).strip()
+    return txt[: max(1, int(max_len or 280))]
 
 
 def _normalize_legacy_guest_id(request: Request, gid: str) -> str:
@@ -540,7 +548,37 @@ def _instance_enemy(rng: random.Random, floor: int, idx: int, w: int, h: int) ->
 
     mini_boss_chance = 0.08 + tier * 0.04 + (0.12 if (floor % 5) == 0 else 0.0)
     if rng.random() < mini_boss_chance:
-        if floor >= 12 and rng.random() < 0.05:
+        if floor >= 56 and rng.random() < 0.16:
+            kind = 'hydra'
+            hp = int(base * 10.8)
+            atk += 22 + int(floor * 1.05)
+            xp = max(int(xp * 6.6), 420 + int(floor * 14))
+            gold += 105 + rng.randrange(0, 120)
+        elif floor >= 46 and rng.random() < 0.20:
+            kind = 'sentinel'
+            hp = int(base * 8.4)
+            atk += 16 + int(floor * 0.92)
+            xp = max(int(xp * 5.1), 260 + int(floor * 10))
+            gold += 75 + rng.randrange(0, 95)
+        elif floor >= 41 and rng.random() < 0.26:
+            kind = 'titan'
+            hp = int(base * 18.0)
+            atk += 34 + int(floor * 1.7)
+            xp = max(int(xp * 10.2), 520 + int(floor * 26))
+            gold += 190 + rng.randrange(0, 190)
+        elif floor >= 31 and rng.random() < 0.22:
+            kind = 'archon'
+            hp = int(base * 9.8)
+            atk += 22 + int(floor * 1.25)
+            xp = max(int(xp * 6.1), 280 + int(floor * 16))
+            gold += 110 + rng.randrange(0, 120)
+        elif floor >= 21 and rng.random() < 0.18:
+            kind = 'archon'
+            hp = int(base * 7.4)
+            atk += 15 + int(floor * 0.95)
+            xp = max(int(xp * 4.9), 160 + int(floor * 12))
+            gold += 60 + rng.randrange(0, 85)
+        elif floor >= 12 and rng.random() < 0.05:
             kind = 'titan'
             hp = int(base * 12.6)
             atk += 20 + int(floor * 1.15)
@@ -1394,12 +1432,12 @@ def game_instance_sync(request: Request, payload: dict = Body(...)):
 def game_chat_send(request: Request, payload: dict = Body(...)):
     guest_id = str(payload.get('guest_id') or '')
     user_key, display_name, _logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
-    msg = str(payload.get('message') or '').strip()
+    msg = _sanitize_text_input(payload.get('message') or '', 280)
     if not msg:
         raise HTTPException(status_code=400, detail='message required')
-    msg = re.sub(r'\s+', ' ', msg)[:280]
     for w in GAME_BAD_WORDS:
         msg = re.sub(re.escape(w), '*' * len(w), msg, flags=re.IGNORECASE)
+    display_name = _safe_display_name(_sanitize_text_input(display_name, 120), 'Player')
     now_iso = datetime.now(timezone.utc).isoformat()
     con = _sec_db(); cur = con.cursor()
     if _is_retired_guest(cur, user_key):

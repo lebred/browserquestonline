@@ -45,7 +45,7 @@
     </div>
 
     <section class="hero">
-      <h1>📐 Core Formulas (v0.22.0)</h1>
+      <h1>📐 Core Formulas (v0.23.0)</h1>
       <p>These formulas mirror live gameplay logic and are the reference for balancing changes through the level 60 path.</p>
     </section>
 
@@ -87,6 +87,12 @@ stretch tier = floors 76-80</pre>
             <tr><td>41+</td><td>18.0%</td><td>8.2%</td><td>1.800%</td></tr>
           </tbody>
         </table>
+        <pre>elite loot quality bonus examples:
+dragon   = drop 28.0% + rarity boost
+archon   = drop 30.0% + stronger rarity boost
+sentinel = drop 34.0% + precision-caster bonus
+hydra    = drop 39.0% + apex-caster bonus
+titan    = drop 42.0% + strongest rarity boost</pre>
       </article>
 
       <article class="card">
@@ -99,7 +105,13 @@ base_atk = floor((3 + floor) * (1 + tier*0.4))
 base_xp = floor((8 + floor*2) * (1 + tier*0.3))
 base_gold = floor((2 + rand(5+floor)) * (1 + tier*0.22))
 
-enemy_move_speed = base_enemy_speed * (1 + 0.02 * floor)</pre>
+enemy_move_speed = base_enemy_speed * (1 + 0.02 * floor)
+
+special ranged archetypes:
+  dragon   = 1 projectile
+  archon   = 1 stronger projectile
+  sentinel = 1 fast laser shot
+  hydra    = 3-way projectile spread</pre>
       </article>
 
       <article class="card">

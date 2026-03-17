@@ -1,5 +1,17 @@
 # BrowserQuest Online Changelog
 
+## v0.23.0 - 2026-03-16
+- Added two advanced enemy archetypes:
+  - `Sentinel` (fast laser caster, floor 46+)
+  - `Hydra` (triple-shot apex caster, floor 56+)
+- Hardened UI text rendering:
+  - escaped chat messages,
+  - escaped leaderboard names,
+  - escaped journal lines,
+  - sanitized chat input on the server before storage.
+- Updated wiki/blog/sitemap content to reflect the level-60 route and the new deep-floor enemy bands.
+- Added root URL and `lastmod` entries to the sitemap.
+
 ## v0.22.0 - 2026-03-16
 - Extended the BrowserQuest item ladder, shop tiers, and loot pools all the way through floors `76-80`, giving the game a real level-60 progression route plus one stretch endgame tier.
 - Added seven new late-game gear lines: `Zenith`, `Gravitation`, `Seraphic`, `Cataclysm`, `Eclipse`, `Firmament`, and `Last Sky`.

@@ -295,7 +295,18 @@
   let clientSession = localStorage.getItem('orson_client_session_v1') || '';
   if(!clientSession){ clientSession = `s_${Math.random().toString(36).slice(2,10)}_${Date.now().toString(36)}`; localStorage.setItem('orson_client_session_v1', clientSession); }
   const CHAT_MAX_LEN = 160;
-  const GAME_VERSION = '0.22.0';
+  const GAME_VERSION = '0.23.0';
+  function escHtml(v){
+    return String(v ?? '')
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
+  function safeText(v, maxLen=280){
+    return String(v ?? '').replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g,' ').replace(/\s+/g,' ').trim().slice(0,maxLen);
+  }
 
   const ITEMS = {
     'Dague rouillée': {slot:'weapon',atk:2,def:0,hp:0,value:12},
@@ -711,7 +722,7 @@
     lavaTick:0,
     hurtFlash:0,
     chatStick:true,
-    metrics:{rat_kills:0,slime_kills:0,brute_kills:0,ogre_kills:0,dragon_kills:0,archon_kills:0,titan_kills:0,max_floor:0,potions_found:0,kills:0},quests:[],questsDone:0,
+    metrics:{rat_kills:0,slime_kills:0,brute_kills:0,ogre_kills:0,dragon_kills:0,archon_kills:0,titan_kills:0,sentinel_kills:0,hydra_kills:0,max_floor:0,potions_found:0,kills:0},quests:[],questsDone:0,
     ctxAction:{type:'attack',target:null,label:'ATK',hint:'Action: Attaquer'},
     fullscreenTried:false,dead:false,levelFxUntil:0,lastVibeAt:0,
     teleportOpen:false,lastPortalOpenAt:0,
@@ -812,6 +823,17 @@
       mobDragon:'Dragons',
       mobArchon:'Archons',
       mobTitan:'Titans',
+      mobSentinel:'Sentinels',
+      mobHydra:'Hydras',
+      mobRatSingular:'Rat',
+      mobSlimeSingular:'Slime',
+      mobBruteSingular:'Brute',
+      mobOgreSingular:'Ogre',
+      mobDragonSingular:'Dragon',
+      mobArchonSingular:'Archon',
+      mobTitanSingular:'Titan',
+      mobSentinelSingular:'Sentinel',
+      mobHydraSingular:'Hydra',
       versionLabel:'Version',
     },
     fr:{
@@ -904,10 +926,35 @@
       mobDragon:'Dragons',
       mobArchon:'Archontes',
       mobTitan:'Titans',
+      mobSentinel:'Sentinelles',
+      mobHydra:'Hydres',
+      mobRatSingular:'Rat',
+      mobSlimeSingular:'Slime',
+      mobBruteSingular:'Brute',
+      mobOgreSingular:'Ogre',
+      mobDragonSingular:'Dragon',
+      mobArchonSingular:'Archonte',
+      mobTitanSingular:'Titan',
+      mobSentinelSingular:'Sentinelle',
+      mobHydraSingular:'Hydre',
       versionLabel:'Version',
     },
   };
   const tr=(k)=> (I18N[state.lang]&&I18N[state.lang][k]) || (I18N.en[k]||k);
+  function enemyDisplayName(kind){
+    const names = {
+      rat: tr('mobRatSingular'),
+      slime: tr('mobSlimeSingular'),
+      brute: tr('mobBruteSingular'),
+      ogre: tr('mobOgreSingular'),
+      dragon: tr('mobDragonSingular'),
+      archon: tr('mobArchonSingular'),
+      titan: tr('mobTitanSingular'),
+      sentinel: tr('mobSentinelSingular'),
+      hydra: tr('mobHydraSingular'),
+    };
+    return names[String(kind||'slime')] || (state.lang==='fr' ? 'Ennemi' : 'Enemy');
+  }
 
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const rng=n=>Math.floor(Math.random()*n);
@@ -934,7 +981,7 @@
   }
 
   function ensureQuests(){ if(!Array.isArray(state.quests)||!state.quests.length) state.quests=QUESTS.map(q=>({id:q.id,done:false})); }
-  function log(msg){ const line=`[${new Date().toLocaleTimeString()}] ${msg}`; state.logs.unshift(line); if(state.logs.length>120) state.logs.length=120; panes.log.innerHTML=state.logs.map(x=>`<div>${x}</div>`).join(''); }
+  function log(msg){ const line=`[${new Date().toLocaleTimeString()}] ${safeText(msg,420)}`; state.logs.unshift(line); if(state.logs.length>120) state.logs.length=120; panes.log.innerHTML=state.logs.map(x=>`<div>${escHtml(x)}</div>`).join(''); }
   function showDialog(msg,ms=2600){ dialog.textContent=msg; dialog.classList.add('show'); clearTimeout(showDialog._t); showDialog._t=setTimeout(()=>dialog.classList.remove('show'),ms); }
   function applyLanguage(){
     const b = document.getElementById('langBtn');
@@ -1186,7 +1233,7 @@
     state.player = {x:12,y:10,hp:100,hpMax:100,atkBase:8,defBase:2,atk:8,def:2,moveSpeed:1,lvl:1,xp:0,xpNeed:40,gold:0,lastAtk:0,swingUntil:0,swingDir:0,facing:'down',attackAt:0};
     state.equipped = {weapon:null,shield:null,armor:null,boots:null,ring:null};
     state.inv = [encodeItem('Dague rouillée'), encodeItem('Bouclier en bois')];
-    state.metrics = {rat_kills:0,slime_kills:0,brute_kills:0,ogre_kills:0,dragon_kills:0,archon_kills:0,titan_kills:0,max_floor:0,potions_found:0,kills:0};
+    state.metrics = {rat_kills:0,slime_kills:0,brute_kills:0,ogre_kills:0,dragon_kills:0,archon_kills:0,titan_kills:0,sentinel_kills:0,hydra_kills:0,max_floor:0,potions_found:0,kills:0};
     state.quests = [];
     state.questsDone = 0;
     state.peers = [];
@@ -1386,30 +1433,42 @@
     if(state.zone==='dungeon'){
       const miniBossChance = 0.08 + tier * 0.04 + ((state.floor % 5)===0 ? 0.12 : 0);
       if(Math.random() < miniBossChance){
-        if(Number(state.floor||1) >= 12 && Math.random() < 0.05){
-          kind = 'titan';
-          hp = Math.floor(base * 12.6);
-          atk += 20 + Math.floor(state.floor * 1.15);
-          xp = Math.max(Math.floor(xp * 7.8), 220 + Math.floor(state.floor * 18));
-          gold += 95 + rng(120);
-        } else if(Number(state.floor||1) >= 21 && Math.random() < 0.18){
-          kind = 'archon';
-          hp = Math.floor(base * 7.4);
-          atk += 15 + Math.floor(state.floor * 0.95);
-          xp = Math.max(Math.floor(xp * 4.9), 160 + Math.floor(state.floor * 12));
-          gold += 60 + rng(85);
-        } else if(Number(state.floor||1) >= 31 && Math.random() < 0.22){
-          kind = 'archon';
-          hp = Math.floor(base * 9.8);
-          atk += 22 + Math.floor(state.floor * 1.25);
-          xp = Math.max(Math.floor(xp * 6.1), 280 + Math.floor(state.floor * 16));
-          gold += 110 + rng(120);
+        if(Number(state.floor||1) >= 56 && Math.random() < 0.16){
+          kind = 'hydra';
+          hp = Math.floor(base * 10.8);
+          atk += 22 + Math.floor(state.floor * 1.05);
+          xp = Math.max(Math.floor(xp * 6.6), 420 + Math.floor(state.floor * 14));
+          gold += 105 + rng(120);
+        } else if(Number(state.floor||1) >= 46 && Math.random() < 0.20){
+          kind = 'sentinel';
+          hp = Math.floor(base * 8.4);
+          atk += 16 + Math.floor(state.floor * 0.92);
+          xp = Math.max(Math.floor(xp * 5.1), 260 + Math.floor(state.floor * 10));
+          gold += 75 + rng(95);
         } else if(Number(state.floor||1) >= 41 && Math.random() < 0.26){
           kind = 'titan';
           hp = Math.floor(base * 18.0);
           atk += 34 + Math.floor(state.floor * 1.7);
           xp = Math.max(Math.floor(xp * 10.2), 520 + Math.floor(state.floor * 26));
           gold += 190 + rng(190);
+        } else if(Number(state.floor||1) >= 31 && Math.random() < 0.22){
+          kind = 'archon';
+          hp = Math.floor(base * 9.8);
+          atk += 22 + Math.floor(state.floor * 1.25);
+          xp = Math.max(Math.floor(xp * 6.1), 280 + Math.floor(state.floor * 16));
+          gold += 110 + rng(120);
+        } else if(Number(state.floor||1) >= 21 && Math.random() < 0.18){
+          kind = 'archon';
+          hp = Math.floor(base * 7.4);
+          atk += 15 + Math.floor(state.floor * 0.95);
+          xp = Math.max(Math.floor(xp * 4.9), 160 + Math.floor(state.floor * 12));
+          gold += 60 + rng(85);
+        } else if(Number(state.floor||1) >= 12 && Math.random() < 0.05){
+          kind = 'titan';
+          hp = Math.floor(base * 12.6);
+          atk += 20 + Math.floor(state.floor * 1.15);
+          xp = Math.max(Math.floor(xp * 7.8), 220 + Math.floor(state.floor * 18));
+          gold += 95 + rng(120);
         } else if(tier >= 2 && Math.random() < 0.5){
           kind = 'dragon';
           hp = Math.floor(base * 4.6);
@@ -1827,6 +1886,48 @@
       if(f==='left'){ ctx.fillRect(sx-11,sy-8,3,3); ctx.fillRect(sx-5,sy-9,3,3); }
       else if(f==='right'){ ctx.fillRect(sx+8,sy-8,3,3); ctx.fillRect(sx+2,sy-9,3,3); }
       else { ctx.fillRect(sx-8,sy-9,3,3); ctx.fillRect(sx+5,sy-9,3,3); }
+    } else if(e.kind==='sentinel'){
+      const f = e.facing || 'down';
+      const pal = {body:'#2a333d',core:'#5fd0ff',trim:'#bceeff',barrel:'#6d7f8e',eye:'#f8feff'};
+      ctx.fillStyle=e.hitFx>0?'#def7ff':pal.body;
+      ctx.fillRect(sx-12,sy-12,24,24);
+      ctx.fillStyle=pal.core;
+      ctx.beginPath(); ctx.arc(sx,sy,7,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=pal.trim;
+      ctx.fillRect(sx-4,sy-16,8,3);
+      ctx.fillRect(sx-4,sy+13,8,3);
+      if(f==='left'){ ctx.fillRect(sx-18,sy-2,10,4); }
+      else if(f==='right'){ ctx.fillRect(sx+8,sy-2,10,4); }
+      else if(f==='up'){ ctx.fillRect(sx-2,sy-18,4,10); }
+      else { ctx.fillRect(sx-2,sy+8,4,10); }
+      ctx.fillStyle=pal.eye;
+      ctx.fillRect(sx-1,sy-1,2,2);
+    } else if(e.kind==='hydra'){
+      const f = e.facing || 'down';
+      const pal = {body:'#375c3f',belly:'#5ea16a',neck:'#4d7b58',head:'#7fd28d',eye:'#102814',spike:'#d6ffcf'};
+      ctx.fillStyle=e.hitFx>0?'#dcffe3':pal.body;
+      ctx.fillRect(sx-12,sy-8,24,18);
+      ctx.fillStyle=pal.neck;
+      ctx.fillRect(sx-15,sy-18,4,12);
+      ctx.fillRect(sx-2,sy-20,4,14);
+      ctx.fillRect(sx+11,sy-18,4,12);
+      ctx.fillStyle=pal.head;
+      ctx.fillRect(sx-18,sy-24,10,8);
+      ctx.fillRect(sx-5,sy-27,10,8);
+      ctx.fillRect(sx+8,sy-24,10,8);
+      ctx.fillStyle=pal.spike;
+      ctx.fillRect(sx-16,sy-27,2,3);
+      ctx.fillRect(sx-1,sy-30,2,3);
+      ctx.fillRect(sx+14,sy-27,2,3);
+      ctx.fillStyle=pal.belly;
+      ctx.fillRect(sx-7,sy-2,14,9);
+      ctx.fillStyle=pal.eye;
+      ctx.fillRect(sx-15,sy-21,1,1);
+      ctx.fillRect(sx-1,sy-24,1,1);
+      ctx.fillRect(sx+13,sy-21,1,1);
+      if(f==='left') ctx.fillRect(sx+12,sy+2,7,2);
+      else if(f==='right') ctx.fillRect(sx-19,sy+2,7,2);
+      else ctx.fillRect(sx+8,sy+8,7,2);
     } else if(e.kind==='archon'){
       const f = e.facing || 'down';
       const pal = {body:'#2a2f46',robe:'#394a7b',trim:'#98b7ff',eye:'#e8f3ff',staff:'#7b5a34',orb:'#74d8ff'};
@@ -1991,15 +2092,27 @@
     for(const p of state.enemyProjectiles){
       const s = worldToScreen(Number(p.x||0), Number(p.y||0));
       const c = String(p.color||'#ff9b72');
-      ctx.fillStyle = c;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 3.2, 0, Math.PI*2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.45)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 4.4, 0, Math.PI*2);
-      ctx.stroke();
+      if(String(p.kind||'orb') === 'laser'){
+        const ps = worldToScreen(Number(p.px||p.x), Number(p.py||p.y));
+        ctx.strokeStyle = c;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(ps.x, ps.y);
+        ctx.lineTo(s.x, s.y);
+        ctx.stroke();
+        ctx.fillStyle = '#eaf7ff';
+        ctx.fillRect(s.x-1.5,s.y-1.5,3,3);
+      } else {
+        ctx.fillStyle = c;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 3.2, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.45)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 4.4, 0, Math.PI*2);
+        ctx.stroke();
+      }
     }
   }
   function drawLootTexts(){
@@ -2040,16 +2153,7 @@
         e.hp-=dmg; e.hitFx=.18; hits++;
         if(e.hp<=0){
           state.player.xp+=e.xp; state.player.gold+=e.gold; state.metrics.kills=Number(state.metrics.kills||0)+1;
-          const enemyNames = {
-            rat: state.lang==='fr'?'Rat':'Rat',
-            slime: state.lang==='fr'?'Slime':'Slime',
-            brute: state.lang==='fr'?'Brute':'Brute',
-            ogre: state.lang==='fr'?'Ogre':'Ogre',
-            dragon: state.lang==='fr'?'Dragon':'Dragon',
-            titan: state.lang==='fr'?'Titan':'Titan',
-            archon: state.lang==='fr'?'Archonte':'Archon',
-          };
-          const enemyLabel = enemyNames[String(e.kind||'slime')] || (state.lang==='fr'?'Ennemi':'Enemy');
+          const enemyLabel = enemyDisplayName(e.kind);
           log(`🧠 ${tr('killMsg')}: ${enemyLabel} · +${Number(e.xp||0)} XP · +${Number(e.gold||0)} ${tr('gold')}`);
           if(e.kind==='rat') state.metrics.rat_kills=Number(state.metrics.rat_kills||0)+1;
           if(e.kind==='slime') state.metrics.slime_kills=Number(state.metrics.slime_kills||0)+1;
@@ -2058,6 +2162,8 @@
           if(e.kind==='dragon') state.metrics.dragon_kills=Number(state.metrics.dragon_kills||0)+1;
           if(e.kind==='archon') state.metrics.archon_kills=Number(state.metrics.archon_kills||0)+1;
           if(e.kind==='titan') state.metrics.titan_kills=Number(state.metrics.titan_kills||0)+1;
+          if(e.kind==='sentinel') state.metrics.sentinel_kills=Number(state.metrics.sentinel_kills||0)+1;
+          if(e.kind==='hydra') state.metrics.hydra_kills=Number(state.metrics.hydra_kills||0)+1;
           maybeLoot(e); checkQuests();
         }
       }
@@ -2082,6 +2188,12 @@
     } else if(kind === 'archon'){
       dropChance = 0.30;
       rarityBonus = {mult:1.22, magic:0.05, rare:0.017, epic:0.0030};
+    } else if(kind === 'sentinel'){
+      dropChance = 0.34;
+      rarityBonus = {mult:1.26, magic:0.055, rare:0.020, epic:0.0038};
+    } else if(kind === 'hydra'){
+      dropChance = 0.39;
+      rarityBonus = {mult:1.31, magic:0.07, rare:0.026, epic:0.0054};
     } else if(kind === 'titan'){
       dropChance = 0.42;
       rarityBonus = {mult:1.35, magic:0.08, rare:0.03, epic:0.0075};
@@ -2114,18 +2226,9 @@
       if(itemName==='Potion HP++') state.metrics.potions_found=Number(state.metrics.potions_found||0)+1;
       const d=itemData(item);
       state.lootTexts.push({x:state.player.x,y:state.player.y-0.6,t:0,life:1.35,text:`+ ${itemDisplayName(item)}`,color:(d?.color||'#ffe08a')});
-      const eliteKinds = new Set(['brute','ogre','dragon','archon','titan']);
+      const eliteKinds = new Set(['brute','ogre','dragon','archon','sentinel','hydra','titan']);
       if(eliteKinds.has(kind)){
-        const enemyNames = {
-          rat: state.lang==='fr'?'Rat':'Rat',
-          slime: state.lang==='fr'?'Slime':'Slime',
-          brute: state.lang==='fr'?'Brute':'Brute',
-          ogre: state.lang==='fr'?'Ogre':'Ogre',
-          dragon: state.lang==='fr'?'Dragon':'Dragon',
-          titan: state.lang==='fr'?'Titan':'Titan',
-          archon: state.lang==='fr'?'Archonte':'Archon',
-        };
-        const enemyLabel = enemyNames[kind] || (state.lang==='fr'?'Élite':'Elite');
+        const enemyLabel = enemyDisplayName(kind);
         log(`🎁 ${tr('eliteLoot')}: ${enemyLabel} -> ${itemDisplayName(item)}`);
       } else {
         log(`🎁 ${tr('lootFound')}: ${itemDisplayName(item)}`);
@@ -2522,6 +2625,8 @@
       `<div>👹 <b>${tr('mobOgre')}:</b> ${Number(state.metrics.ogre_kills||0)}</div>`,
       `<div>🐉 <b>${tr('mobDragon')}:</b> ${Number(state.metrics.dragon_kills||0)}</div>`,
       `<div>🔮 <b>${tr('mobArchon')}:</b> ${Number(state.metrics.archon_kills||0)}</div>`,
+      `<div>📡 <b>${tr('mobSentinel')}:</b> ${Number(state.metrics.sentinel_kills||0)}</div>`,
+      `<div>🐍 <b>${tr('mobHydra')}:</b> ${Number(state.metrics.hydra_kills||0)}</div>`,
       `<div>🗿 <b>${tr('mobTitan')}:</b> ${Number(state.metrics.titan_kills||0)}</div>`,
     ].join('');
 
@@ -2572,7 +2677,7 @@
       const chatStamp = `${state.lang}|${state.chatMessages.length}|${String(lastMsg?.created_at||lastMsg?.ts||lastMsg?.id||'')}`;
       if(state.chatRenderStamp !== chatStamp){
         chatListEl.innerHTML = state.chatMessages.length
-          ? state.chatMessages.map(m => `<div><b>${String(m.display_name||'Player')}</b>: ${String(m.message||'')}</div>`).join('')
+          ? state.chatMessages.map(m => `<div><b>${escHtml(safeText(m.display_name||'Player',120))}</b>: ${escHtml(safeText(m.message||'',CHAT_MAX_LEN))}</div>`).join('')
           : `<div class="k">${tr('noMessages')}</div>`;
         state.chatRenderStamp = chatStamp;
         if(state.chatStick || nearBottom){
@@ -2595,10 +2700,10 @@
       const dailyRows = (d?.ok && Array.isArray(d.items)) ? d.items : [];
       const dayLabel = String(d?.day || '');
       const globalHtml = globalRows.length
-        ? globalRows.map((it,idx)=>`<div>${idx+1}. <b>${String(it.display_name||'Player')}</b> <span class="k">Lvl ${Number(it.level||1)} · ${tr('gold')} ${Number(it.gold||0)}</span></div>`).join('')
+        ? globalRows.map((it,idx)=>`<div>${idx+1}. <b>${escHtml(safeText(it.display_name||'Player',120))}</b> <span class="k">Lvl ${Number(it.level||1)} · ${tr('gold')} ${Number(it.gold||0)}</span></div>`).join('')
         : `<div class="k">${tr('noMessages')}</div>`;
       const dailyHtml = dailyRows.length
-        ? dailyRows.map((it,idx)=>`<div>${idx+1}. <b>${String(it.display_name||'Player')}</b> <span class="k">${Number(it.kills||0)} ${tr('killsToday')}</span></div>`).join('')
+        ? dailyRows.map((it,idx)=>`<div>${idx+1}. <b>${escHtml(safeText(it.display_name||'Player',120))}</b> <span class="k">${Number(it.kills||0)} ${tr('killsToday')}</span></div>`).join('')
         : `<div class="k">${tr('noMessages')}</div>`;
       panes.rank.innerHTML = `
         <div class="k" style="margin-bottom:6px">${tr('onlineInZone')}: <b>${Math.max(1, Number(state.onlineTotal||1))}</b></div>
@@ -2938,7 +3043,7 @@
     for(const e of state.enemies){
       const dx=state.player.x-e.x, dy=state.player.y-e.y, d=Math.hypot(dx,dy)||1;
       const minAdj = 1.05;
-      const baseMoveSpeed = (e.kind==='titan') ? 0.33 : ((e.kind==='brute'||e.kind==='ogre') ? 0.82 : (e.kind==='dragon' ? 1.05 : 1.6));
+      const baseMoveSpeed = (e.kind==='titan') ? 0.33 : (e.kind==='hydra' ? 0.72 : (e.kind==='sentinel' ? 0.96 : ((e.kind==='brute'||e.kind==='ogre') ? 0.82 : (e.kind==='dragon' ? 1.05 : 1.6))));
       const floorSpeedScale = 1 + Math.max(0, Number(state.floor||1)) * 0.02;
       const moveSpeed = baseMoveSpeed * floorSpeedScale;
       if(Math.abs(dx) > Math.abs(dy)) e.facing = dx>0 ? 'right' : 'left';
@@ -2947,21 +3052,37 @@
         e.x+=(dx/d)*dt*moveSpeed;
         e.y+=(dy/d)*dt*moveSpeed;
       }
-      const isRangedCaster = (e.kind==='dragon' || e.kind==='archon');
+      const isRangedCaster = (e.kind==='dragon' || e.kind==='archon' || e.kind==='sentinel' || e.kind==='hydra');
       const atkRange = isRangedCaster ? 1.18 : (e.kind==='titan' ? 2.25 : ((e.kind==='brute'||e.kind==='ogre') ? 1.4 : 1.25));
       if(isRangedCaster && d<=6.4 && d>1.35){
         e.projCd = Number(e.projCd||0) - dt;
         if(e.projCd <= 0){
-          const speed = e.kind==='archon' ? 4.8 : 5.2;
-          const vx = (dx/d) * speed;
-          const vy = (dy/d) * speed;
-          const color = e.kind==='archon'
-            ? '#87b3ff'
-            : (e.element==='frost' ? '#89d6ff' : (e.element==='shadow' ? '#c69bff' : '#ff9b72'));
-          const dmgMult = e.kind==='archon' ? 0.62 : 0.55;
-          const life = e.kind==='archon' ? 1.62 : 1.45;
-          state.enemyProjectiles.push({x:e.x,y:e.y,px:e.x,py:e.y,owner:e.id,vx,vy,life,color,dmg:Math.max(2,Math.floor(e.atk*dmgMult))});
-          e.projCd = (e.kind==='archon' ? 1.08 : 1.4) + Math.random()*(e.kind==='archon' ? 0.62 : 0.8);
+          const shots = [];
+          if(e.kind==='hydra'){
+            const speed = 4.7;
+            const spread = 0.24;
+            const baseA = Math.atan2(dy,dx);
+            for(const off of [-spread,0,spread]){
+              shots.push({vx:Math.cos(baseA+off)*speed,vy:Math.sin(baseA+off)*speed,life:1.48,color:'#93ff9f',dmg:Math.max(2,Math.floor(e.atk*0.52)),kind:'orb'});
+            }
+            e.projCd = 1.42 + Math.random()*0.85;
+          } else if(e.kind==='sentinel'){
+            const speed = 7.2;
+            shots.push({vx:(dx/d)*speed,vy:(dy/d)*speed,life:0.92,color:'#74e4ff',dmg:Math.max(2,Math.floor(e.atk*0.58)),kind:'laser'});
+            e.projCd = 1.12 + Math.random()*0.55;
+          } else {
+            const speed = e.kind==='archon' ? 4.8 : 5.2;
+            const color = e.kind==='archon'
+              ? '#87b3ff'
+              : (e.element==='frost' ? '#89d6ff' : (e.element==='shadow' ? '#c69bff' : '#ff9b72'));
+            const dmgMult = e.kind==='archon' ? 0.62 : 0.55;
+            const life = e.kind==='archon' ? 1.62 : 1.45;
+            shots.push({vx:(dx/d)*speed,vy:(dy/d)*speed,life,color,dmg:Math.max(2,Math.floor(e.atk*dmgMult)),kind:'orb'});
+            e.projCd = (e.kind==='archon' ? 1.08 : 1.4) + Math.random()*(e.kind==='archon' ? 0.62 : 0.8);
+          }
+          for(const shot of shots){
+            state.enemyProjectiles.push({x:e.x,y:e.y,px:e.x,py:e.y,owner:e.id,...shot});
+          }
         }
       }
       if(d<=atkRange && !(isRangedCaster && d>1.35)){
@@ -3057,7 +3178,9 @@
       p.life -= dt;
       const tx = Math.floor(p.x), ty = Math.floor(p.y);
       if(!passable(tx,ty)) p.life = 0;
-      const hitNow = dist(p.x,p.y,state.player.x,state.player.y) < 0.34;
+      const hitRadius = String(p.kind||'orb') === 'laser' ? 0.22 : 0.34;
+      const sweepRadius = String(p.kind||'orb') === 'laser' ? 0.20 : 0.30;
+      const hitNow = dist(p.x,p.y,state.player.x,state.player.y) < hitRadius;
       const hitSweep = (() => {
         const ax = Number(p.px||p.x), ay = Number(p.py||p.y), bx = Number(p.x||0), by = Number(p.y||0);
         const vx = bx - ax, vy = by - ay;
@@ -3065,7 +3188,7 @@
         const vv = Math.max(0.000001, vx*vx + vy*vy);
         const t = clamp((wx*vx + wy*vy) / vv, 0, 1);
         const cx = ax + vx*t, cy = ay + vy*t;
-        return dist(cx,cy,state.player.x,state.player.y) < 0.30;
+        return dist(cx,cy,state.player.x,state.player.y) < sweepRadius;
       })();
       const preciseHit = hitNow || hitSweep;
       if(preciseHit){
@@ -3228,7 +3351,7 @@
     if(!Number.isFinite(Number(state.player.swingDir))) state.player.swingDir = 0;
     state.equipped=normalizeEquipped(s.equipped);
     state.inv=normalizeInventory(s.inv);
-    state.metrics=(s.metrics&&typeof s.metrics==='object')?s.metrics:{rat_kills:0,slime_kills:0,brute_kills:0,ogre_kills:0,dragon_kills:0,archon_kills:0,titan_kills:0,max_floor:0,potions_found:0,kills:0};
+    state.metrics=(s.metrics&&typeof s.metrics==='object')?s.metrics:{rat_kills:0,slime_kills:0,brute_kills:0,ogre_kills:0,dragon_kills:0,archon_kills:0,titan_kills:0,sentinel_kills:0,hydra_kills:0,max_floor:0,potions_found:0,kills:0};
     state.metrics.rat_kills=Number(state.metrics.rat_kills||0);
     state.metrics.slime_kills=Number(state.metrics.slime_kills||0);
     state.metrics.brute_kills=Number(state.metrics.brute_kills||0);
@@ -3236,6 +3359,8 @@
     state.metrics.dragon_kills=Number(state.metrics.dragon_kills||0);
     state.metrics.archon_kills=Number(state.metrics.archon_kills||0);
     state.metrics.titan_kills=Number(state.metrics.titan_kills||0);
+    state.metrics.sentinel_kills=Number(state.metrics.sentinel_kills||0);
+    state.metrics.hydra_kills=Number(state.metrics.hydra_kills||0);
     state.metrics.max_floor=Number(state.metrics.max_floor||0);
     state.metrics.potions_found=Number(state.metrics.potions_found||0);
     state.metrics.kills=Number(state.metrics.kills||0);
