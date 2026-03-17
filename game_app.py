@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Body, Request
+from fastapi import FastAPI, HTTPException, Body, Request, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
 
@@ -43,7 +43,7 @@ BLOG_ARTICLE_FILES = {
     'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
     'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
 }
-GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.23.2').strip() or '0.23.2'
+GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.23.3').strip() or '0.23.3'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -925,6 +925,11 @@ def game_me(request: Request, guest_id: str = ''):
 @app.get('/api/game/version')
 def game_version():
     return {'ok': True, 'version': GAME_VERSION}
+
+
+@app.head('/api/game/version')
+def game_version_head():
+    return Response(status_code=200)
 
 
 @app.get(GAME_ADMIN_SECRET_PATH)

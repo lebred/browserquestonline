@@ -28,6 +28,12 @@
       <p class="muted">Use this page and the in-game version chip together to verify that your test session is running the expected build.</p>
 
 
+      <h2>v0.23.3 - 2026-03-16</h2>
+      <ul>
+        <li>Added explicit <code>HEAD /api/game/version</code> support so uptime checks and edge monitoring no longer trigger a noisy 405.</li>
+        <li>Kept the public version probe lightweight and compatible with both browser and infrastructure checks.</li>
+      </ul>
+
       <h2>v0.23.2 - 2026-03-16</h2>
       <ul>
         <li>Aligned BrowserQuest security headers so Nginx remains the single source of truth for the public CSP and edge headers.</li>
