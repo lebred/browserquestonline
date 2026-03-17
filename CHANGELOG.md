@@ -1,5 +1,11 @@
 # BrowserQuest Online Changelog
 
+## v0.23.1 - 2026-03-16
+- Added a public-release security hardening pass for BrowserQuest.
+- Added server-side rate limiting for save, sync, presence, rename, guest-claim, and chat-send flows.
+- Added browser security headers and a restrictive CSP for safer public exposure.
+- Kept gameplay behavior unchanged while making abuse and spam materially harder.
+
 ## v0.23.0 - 2026-03-16
 - Added two advanced enemy archetypes:
   - `Sentinel` (fast laser caster, floor 46+)

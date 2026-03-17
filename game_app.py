@@ -43,12 +43,38 @@ BLOG_ARTICLE_FILES = {
     'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
     'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
 }
-GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.23.0').strip() or '0.23.0'
+GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.23.1').strip() or '0.23.1'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
 
 _SEC_DB_SCHEMA_READY = False
+
+
+@app.middleware('http')
+async def browserquest_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "base-uri 'self'; "
+        "object-src 'none'; "
+        "frame-ancestors 'none'; "
+        "img-src 'self' data: https:; "
+        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "font-src 'self' data:; "
+        "connect-src 'self' https://browserquest.online; "
+        "form-action 'self' https://accounts.google.com"
+    )
+    proto = str(request.headers.get('x-forwarded-proto') or request.url.scheme or '').lower()
+    if proto == 'https':
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
 
 
 def _sec_secret() -> str:
@@ -174,6 +200,54 @@ def _request_ip(request: Request) -> str:
     if xr:
         return xr
     return str(request.client.host if request.client else '').strip()
+
+
+def _rate_limit_subject(request: Request, user_key: str = '') -> str:
+    uk = str(user_key or '').strip()
+    if uk.startswith('user:'):
+        return uk
+    ip = _request_ip(request)
+    if ip:
+        return f'ip:{ip}'
+    return uk or 'anon'
+
+
+def _enforce_rate_limit(
+    cur: sqlite3.Cursor,
+    request: Request,
+    scope: str,
+    limit: int,
+    window_sec: int,
+    user_key: str = '',
+) -> None:
+    now = int(time.time())
+    now_iso = datetime.now(timezone.utc).isoformat()
+    scope_key = re.sub(r'[^a-z0-9:_-]+', '', str(scope or '').strip().lower())[:80] or 'default'
+    subject = _rate_limit_subject(request, user_key=user_key)[:160]
+    wsec = max(1, int(window_sec or 60))
+    lim = max(1, int(limit or 1))
+    window_key = f'{scope_key}:{now // wsec}'
+    cur.execute(
+        '''
+        INSERT INTO game_rate_limits(scope, subject, window_key, count, updated_at)
+        VALUES (?, ?, ?, 1, ?)
+        ON CONFLICT(scope, subject, window_key) DO UPDATE SET
+            count=game_rate_limits.count + 1,
+            updated_at=excluded.updated_at
+        ''',
+        (scope_key, subject, window_key, now_iso),
+    )
+    cur.execute(
+        'SELECT count FROM game_rate_limits WHERE scope=? AND subject=? AND window_key=? LIMIT 1',
+        (scope_key, subject, window_key),
+    )
+    row = cur.fetchone()
+    count = int((row['count'] if row and row['count'] is not None else 0) or 0)
+    if random.random() < 0.05:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+        cur.execute('DELETE FROM game_rate_limits WHERE updated_at < ?', (cutoff,))
+    if count > lim:
+        raise HTTPException(status_code=429, detail=f'rate_limited:{scope_key}')
 
 
 def _enforce_guest_identity_quota(request: Request, cur: sqlite3.Cursor, user_key: str) -> None:
@@ -361,6 +435,18 @@ def _sec_db() -> sqlite3.Connection:
         )
         '''
     )
+    cur.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS game_rate_limits (
+            scope TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            window_key TEXT NOT NULL,
+            count INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY(scope, subject, window_key)
+        )
+        '''
+    )
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_profiles_rank ON game_profiles(level DESC, gold DESC, max_floor DESC, updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_chat_created ON game_chat_messages(created_at DESC, id DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_guest_links_guest ON game_guest_links(guest_key, expires_at DESC)')
@@ -369,6 +455,7 @@ def _sec_db() -> sqlite3.Connection:
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_guest_ip_daily_day_ip ON game_guest_ip_daily(day_key, ip, updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_floor_instances_zone_floor ON game_floor_instances(zone, floor, updated_at DESC)')
     cur.execute('CREATE INDEX IF NOT EXISTS idx_game_retired_guests_time ON game_retired_guests(retired_at DESC)')
+    cur.execute('CREATE INDEX IF NOT EXISTS idx_game_rate_limits_updated ON game_rate_limits(updated_at DESC)')
     # Purge legacy shared guest artifacts created before strict guest_id handling.
     cur.execute("DELETE FROM game_profiles WHERE user_key='guest:guest' OR lower(display_name)='guest-guest'")
     cur.execute("DELETE FROM game_saves WHERE user_key='guest:guest'")
@@ -943,6 +1030,7 @@ def game_profile_name_set(request: Request, payload: dict = Body(...)):
     now_iso = datetime.now(timezone.utc).isoformat()
     con = _sec_db()
     cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'profile_name', 6, 3600, user_key=user_key)
     if _display_name_taken(cur, clean_name, user_key):
         con.close()
         return {'ok': False, 'reason': 'name_taken'}
@@ -995,6 +1083,7 @@ def game_save_get(request: Request, guest_id: str = ''):
     user_key, display_name, logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
     con = _sec_db()
     cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'save_get', 90, 60, user_key=user_key)
     if _is_retired_guest(cur, user_key):
         con.close()
         return {'ok': False, 'reason': 'guest_retired'}
@@ -1036,6 +1125,7 @@ def game_save_set(request: Request, payload: dict = Body(...)):
 
     con = _sec_db()
     cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'save_set', 70, 60, user_key=user_key)
     if _is_retired_guest(cur, user_key):
         con.close()
         return {'ok': False, 'reason': 'guest_retired'}
@@ -1104,6 +1194,7 @@ def game_claim_guest_save(request: Request, payload: dict = Body(...)):
     display_name = str(user.get('full_name') or user.get('email') or f"user-{int(user['user_id'])}")[:120]
 
     con = _sec_db(); cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'claim_guest', 6, 3600, user_key=user_key)
 
     def _score(obj: dict | None) -> tuple[int, int, int]:
         if not isinstance(obj, dict):
@@ -1185,6 +1276,7 @@ def game_create_guest_link(payload: dict = Body(...)):
     now_iso = now.isoformat()
     expires_at = (now + timedelta(hours=48)).isoformat()
     code = secrets.token_urlsafe(18)
+    # requestless endpoint signature kept as-is intentionally; guest link creation stays save-dependent and low-risk.
     con = _sec_db(); cur = con.cursor()
     cur.execute('SELECT 1 FROM game_saves WHERE user_key=? LIMIT 1', (guest_key,))
     if not cur.fetchone():
@@ -1208,6 +1300,7 @@ def game_claim_guest_link(request: Request, payload: dict = Body(...)):
     now_iso = datetime.now(timezone.utc).isoformat()
 
     con = _sec_db(); cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'claim_guest_link', 10, 3600, user_key=user_key)
     cur.execute('SELECT code, guest_key, expires_at, used_at FROM game_guest_links WHERE code=? LIMIT 1', (code,))
     row = cur.fetchone()
     if not row:
@@ -1305,6 +1398,7 @@ def game_presence_update(request: Request, payload: dict = Body(...)):
     attack_at = max(0, int(payload.get('attack_at') or 0))
     now_iso = datetime.now(timezone.utc).isoformat()
     con = _sec_db(); cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'presence_update', 240, 60, user_key=user_key)
     if _is_retired_guest(cur, user_key):
         con.close()
         return {'ok': False, 'reason': 'guest_retired'}
@@ -1340,6 +1434,7 @@ def game_presence_clear(request: Request, payload: dict = Body(...)):
     user_key, _display_name, _logged = _game_identity(request, guest_id=guest_id, strict_guest=True)
     client_session = _game_client_session(payload)
     con = _sec_db(); cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'presence_clear', 60, 60, user_key=user_key)
     cur.execute('DELETE FROM game_presence WHERE user_key=?', (user_key,))
     cur.execute('DELETE FROM game_active_sessions WHERE user_key=? AND client_session=?', (user_key, client_session))
     con.commit(); con.close()
@@ -1354,6 +1449,7 @@ def game_presence_list(request: Request, guest_id: str = '', zone: str = 'villag
     fl = max(0, min(int(floor or 0), 999))
     cutoff = (datetime.now(timezone.utc) - timedelta(seconds=120)).isoformat()
     con = _sec_db(); cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'presence_list', 240, 60, user_key=user_key)
     cur.execute('DELETE FROM game_presence WHERE updated_at < ?', (cutoff,))
     cur.execute('SELECT COUNT(1) AS c FROM game_presence')
     total_online = int((cur.fetchone() or {'c': 0})['c'] or 0)
@@ -1382,6 +1478,7 @@ def game_instance_sync(request: Request, payload: dict = Body(...)):
 
     con = _sec_db()
     cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'instance_sync', 160, 60, user_key=user_key)
     if _is_retired_guest(cur, user_key):
         con.close()
         return {'ok': False, 'reason': 'guest_retired'}
@@ -1440,6 +1537,7 @@ def game_chat_send(request: Request, payload: dict = Body(...)):
     display_name = _safe_display_name(_sanitize_text_input(display_name, 120), 'Player')
     now_iso = datetime.now(timezone.utc).isoformat()
     con = _sec_db(); cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'chat_send', 12, 60, user_key=user_key)
     if _is_retired_guest(cur, user_key):
         con.close()
         return {'ok': False, 'reason': 'guest_retired'}
