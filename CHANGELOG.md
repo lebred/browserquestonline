@@ -1,5 +1,9 @@
 # BrowserQuest Online Changelog
 
+## v0.23.3 - 2026-03-16
+- Added explicit `HEAD /api/game/version` support for cleaner uptime and edge health checks.
+- Kept the public version probe lightweight while avoiding false-positive `405 Method Not Allowed` noise.
+
 ## v0.23.2 - 2026-03-16
 - Aligned BrowserQuest security headers so Nginx remains the single source of truth for CSP and public edge headers.
 - Added server-side rate limiting to chat history and leaderboard read endpoints.
