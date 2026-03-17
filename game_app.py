@@ -43,7 +43,7 @@ BLOG_ARTICLE_FILES = {
     'boss-titans-et-archons-strategie-browserquest': 'game-blog-a7.html',
     'pourquoi-browserquest-online-est-addictif': 'game-blog-a8.html',
 }
-GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.23.1').strip() or '0.23.1'
+GAME_VERSION = os.getenv('BQ_GAME_VERSION', '0.23.2').strip() or '0.23.2'
 
 app = FastAPI(title='BrowserQuest Online API')
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
@@ -54,26 +54,9 @@ _SEC_DB_SCHEMA_READY = False
 @app.middleware('http')
 async def browserquest_security_headers(request: Request, call_next):
     response = await call_next(request)
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
-    response.headers['Cross-Origin-Opener-Policy'] = 'same-origin'
-    response.headers['Content-Security-Policy'] = (
-        "default-src 'self'; "
-        "base-uri 'self'; "
-        "object-src 'none'; "
-        "frame-ancestors 'none'; "
-        "img-src 'self' data: https:; "
-        "style-src 'self' 'unsafe-inline'; "
-        "script-src 'self' 'unsafe-inline'; "
-        "font-src 'self' data:; "
-        "connect-src 'self' https://browserquest.online; "
-        "form-action 'self' https://accounts.google.com"
-    )
-    proto = str(request.headers.get('x-forwarded-proto') or request.url.scheme or '').lower()
-    if proto == 'https':
-        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    # Nginx is the public edge and already injects the canonical security headers/CSP.
+    # Keep backend additions minimal to avoid duplicated/conflicting policies.
+    response.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
     return response
 
 
@@ -1548,9 +1531,10 @@ def game_chat_send(request: Request, payload: dict = Body(...)):
 
 
 @app.get('/api/game/chat/list')
-def game_chat_list(limit: int = 80):
+def game_chat_list(request: Request, limit: int = 80):
     lim = max(1, min(int(limit or 80), 300))
     con = _sec_db(); cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'chat_list', 180, 60)
     cur.execute('SELECT id, display_name, message, created_at FROM game_chat_messages ORDER BY id DESC LIMIT ?', (lim,))
     rows = [dict(r) for r in cur.fetchall()]
     con.close(); rows.reverse()
@@ -1558,9 +1542,10 @@ def game_chat_list(limit: int = 80):
 
 
 @app.get('/api/game/leaderboard')
-def game_leaderboard(limit: int = 20):
+def game_leaderboard(request: Request, limit: int = 20):
     lim = max(1, min(int(limit or 20), 200))
     con = _sec_db(); cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'leaderboard', 180, 60)
     cur.execute(
         '''
         SELECT p.user_key, p.display_name, p.level, p.gold, p.max_floor, p.kills, p.quests_done, p.updated_at
@@ -1580,11 +1565,12 @@ def game_leaderboard(limit: int = 20):
 
 
 @app.get('/api/game/daily-leaderboard')
-def game_daily_leaderboard(limit: int = 20):
+def game_daily_leaderboard(request: Request, limit: int = 20):
     lim = max(1, min(int(limit or 20), 200))
     day_key = _game_today_key()
     con = _sec_db()
     cur = con.cursor()
+    _enforce_rate_limit(cur, request, 'daily_leaderboard', 180, 60)
     cur.execute(
         '''
         SELECT user_key, display_name, kills, updated_at

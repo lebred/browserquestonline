@@ -1,5 +1,10 @@
 # BrowserQuest Online Changelog
 
+## v0.23.2 - 2026-03-16
+- Aligned BrowserQuest security headers so Nginx remains the single source of truth for CSP and public edge headers.
+- Added server-side rate limiting to chat history and leaderboard read endpoints.
+- Kept gameplay unchanged while reducing maintenance ambiguity around duplicated header policies.
+
 ## v0.23.1 - 2026-03-16
 - Added a public-release security hardening pass for BrowserQuest.
 - Added server-side rate limiting for save, sync, presence, rename, guest-claim, and chat-send flows.

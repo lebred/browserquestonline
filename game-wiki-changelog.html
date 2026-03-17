@@ -28,6 +28,13 @@
       <p class="muted">Use this page and the in-game version chip together to verify that your test session is running the expected build.</p>
 
 
+      <h2>v0.23.2 - 2026-03-16</h2>
+      <ul>
+        <li>Aligned BrowserQuest security headers so Nginx remains the single source of truth for the public CSP and edge headers.</li>
+        <li>Added rate limiting on chat history and leaderboard read endpoints to reduce low-value scraping and spam pressure.</li>
+        <li>Kept gameplay behavior unchanged while making the public release easier to maintain and reason about.</li>
+      </ul>
+
       <h2>v0.23.1 - 2026-03-16</h2>
       <ul>
         <li>Added a public-release security hardening pass for BrowserQuest.</li>
